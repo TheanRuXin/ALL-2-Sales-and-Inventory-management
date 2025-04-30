@@ -1,0 +1,91 @@
+import customtkinter as ctk
+from PIL import Image
+from tkinter import messagebox
+#from database import Database
+import subprocess
+import sys
+
+class Register(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+
+        #self.db = Database()
+        self.title("Registration")
+        self.geometry("1920x974")
+        ctk.set_appearance_mode("light")
+
+        try:
+            logo_image = Image.open(r"C:\Users\User\Documents\Ruxin file\ALL 2\logo.png").resize((80, 80))
+            ctk_logo_image = ctk.CTkImage(light_image=logo_image, dark_image=logo_image, size=(80, 80))
+            logo_frame = ctk.CTkFrame(self, fg_color="transparent")
+            logo_frame.place(x=10, y=10)
+
+            logo_label = ctk.CTkLabel(logo_frame, image=ctk_logo_image, text="")
+            logo_label.pack()
+        except Exception as e:
+            print(f"Error loading bot image: {e}")
+
+        # Main Frame for "Create Account"
+        main_frame = ctk.CTkFrame(self, fg_color="#D9D9D9", border_width=0, corner_radius=15)
+        main_frame.pack(pady=(50,50), padx=200, fill="both", expand=True)
+
+        ctk.CTkLabel(main_frame, text="Create Account", font=("Arial", 48, "bold")).pack(pady=10)
+
+        second_frame = ctk.CTkFrame(main_frame, fg_color="#FFFFFF", corner_radius=15)
+        second_frame.pack(pady=(20, 50),padx=100, fill="both", expand=True)
+
+        ctk.CTkLabel(second_frame, text="Username:", font=("Arial", 24)).pack(pady=20,padx=30, anchor="w")
+        self.username_entry = ctk.CTkEntry(second_frame, placeholder_text="Username", width=880,height=40, justify="center",font=("Arial", 24))
+        self.username_entry.pack()
+
+        ctk.CTkLabel(second_frame, text="Password:", font=("Arial", 24)).pack(pady=20,padx=30, anchor="w")
+        self.password_entry = ctk.CTkEntry(second_frame, placeholder_text="Password", show="*", width=880,height=40,justify="center",font=("Arial", 24))
+        self.password_entry.pack()
+
+        ctk.CTkLabel(second_frame, text="Confirm Password:", font=("Arial", 24)).pack(pady=20,padx=30, anchor="w")
+        self.confirm_password_entry = ctk.CTkEntry(second_frame, placeholder_text="Confirm Password", show="*", width=880,height=40,justify="center",font=("Arial", 24))
+        self.confirm_password_entry.pack()
+
+        ctk.CTkLabel(second_frame, text="Select User Type:", font=("Arial", 24)).pack(pady=20,padx=30, anchor="w")
+        self.role_var = ctk.StringVar(value="Select User Type")
+        self.role_dropdown = ctk.CTkComboBox(second_frame, values=["Admin", "Cashier"], variable=self.role_var,width=880,height=40)
+        self.role_dropdown.pack()
+
+        # Register Button
+        ctk.CTkButton(second_frame, text="Register", width=300,height=30, fg_color="#2A50CB",hover_color="#1a39a3",command=self.register_user).pack(pady=(30, 10))
+
+    def register_user(self):
+        username = self.username_entry.get().strip()
+        password = self.password_entry.get().strip()
+        confirm_password = self.confirm_password_entry.get().strip()
+        role = self.role_var.get()
+
+        if not username or not password or not confirm_password:
+            messagebox.showerror("Error", "Fields cannot be empty!")
+            return
+
+        if password != confirm_password:
+            messagebox.showerror("Error", "Passwords do not match!")
+            return
+
+        if role == "Select User Type":
+            messagebox.showerror("Error", "Please select a user role!")
+            return
+
+        if self.db.register_user(username, password, role):
+            messagebox.showinfo("Success", "User registered successfully!")
+            self.withdraw()  # Hide window instead of destroying it
+            self.after(500, self.open_main_page)  # Open main page after a delay
+        else:
+            messagebox.showerror("Error", "Username already exists!")
+
+    def open_main_page(self):
+        try:
+            subprocess.Popen([sys.executable,r"C:\Users\User\PycharmProjects\4007\Main_page\main.py"])
+            self.destroy()
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not open main_page.py: {e}")
+
+if __name__ == "__main__":
+    app = Register()
+    app.mainloop()
