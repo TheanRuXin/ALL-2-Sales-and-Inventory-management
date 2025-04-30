@@ -1,0 +1,60 @@
+import customtkinter as ctk
+from PIL import Image
+import subprocess
+import sys
+
+
+class ManagerDashboard(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+
+        self.title("Manager Dashboard")
+        self.geometry("1920x974")
+        ctk.set_appearance_mode("light")
+
+        # Create the frame for the background image
+        picture_frame = ctk.CTkFrame(self, width=1547, height=974)
+        picture_frame.place(x=0, y=0)
+
+        try:
+            background_dashboard = Image.open(r"C:\Users\User\Documents\Ruxin file\ALL 2\background.png").resize((1547, 800))
+            ctk_background_dashboard = ctk.CTkImage(light_image=background_dashboard, dark_image=background_dashboard,size=(1547, 800))
+
+            background_dashboard_label = ctk.CTkLabel(picture_frame, image=ctk_background_dashboard, text="")
+            background_dashboard_label.place(x=0, y=0)
+        except Exception as e:
+            print(f"Error loading login image: {e}")
+
+        try:
+            logo_image = Image.open(r"C:\Users\User\Documents\Ruxin file\ALL 2\logo.png").resize((80, 80))
+            ctk_logo_image = ctk.CTkImage(light_image=logo_image, dark_image=logo_image, size=(80, 80))
+            logo_frame = ctk.CTkFrame(self, fg_color="transparent")
+            logo_frame.place(x=10, y=10)
+
+            logo_label = ctk.CTkLabel(logo_frame, image=ctk_logo_image, text="")
+            logo_label.pack()
+        except Exception as e:
+            print(f"Error loading bot image: {e}")
+
+        ctk.CTkLabel = ctk.CTkLabel(self, text="Manager Dashboard", font=("Inter", 64)).pack(pady=50)
+        ctk.CTkButton(self, text="View Reports", font=("Inter", 30),fg_color="#2A50CB",hover_color="#1a39a3",width=300,height=100).pack(pady=20)
+        ctk.CTkButton(self, text="Manage Inventory", font=("Inter", 30),fg_color="#2A50CB",hover_color="#1a39a3",width=300,height=100).pack(pady=20)
+        ctk.CTkButton(self, text="Registration", font=("Inter", 30),fg_color="#2A50CB",hover_color="#1a39a3",width=300,height=100,command=self.registration).pack(pady=20)
+        ctk.CTkButton(self, text="Logout", font=("Inter", 30),fg_color="#2A50CB",hover_color="#1a39a3",width=300,height=100).pack(pady=20)
+
+    def registration(self):
+        self.destroy()
+        subprocess.Popen([sys.executable,r"C:\Users\User\PycharmProjects\ALL 2\Admin and Cashier registration.py"])
+    def logout(self):
+        self.destroy()
+        subprocess.Popen([sys.executable,r])
+    def manage_inventory(self):
+        self.destroy()
+        subprocess.Popen([sys.executable,r])
+    def view_reports(self):
+        self.destroy()
+        subprocess.Popen([sys.executable,r])
+
+
+if __name__ == "__main__":
+    ManagerDashboard().mainloop()
