@@ -1,15 +1,17 @@
 import customtkinter as ctk
 from PIL import Image
 from tkinter import messagebox
-#from database import Database
+import sqlite3
 import subprocess
 import sys
+import hashlib
+import re
 
 class Register(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        #self.db = Database()
+        self.Trackwise_db()
         self.title("Registration")
         self.geometry("1920x974")
         ctk.set_appearance_mode("light")
@@ -54,6 +56,20 @@ class Register(ctk.CTk):
         # Register Button
         ctk.CTkButton(second_frame, text="Register", width=300,height=30, fg_color="#2A50CB",hover_color="#1a39a3",command=self.register_user).pack(pady=(30, 10))
 
+    def Trackwise_db(self):
+        conn = sqlite3.connect("Trackwise.db")
+        cursor = conn.cursor()
+        cursor.execute('''CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL,
+        password TEXT NOT NULL,
+        role TEXT NOT NULL)''')
+        conn.commit()
+        conn.close()
+
+    def hash_password(self,password):
+        return hashlib.sha256(password.encode()).hexdigest()
+
     def register_user(self):
         username = self.username_entry.get().strip()
         password = self.password_entry.get().strip()
@@ -72,19 +88,26 @@ class Register(ctk.CTk):
             messagebox.showerror("Error", "Please select a user role!")
             return
 
-        if self.db.register_user(username, password, role):
-            messagebox.showinfo("Success", "User registered successfully!")
-            self.withdraw()  # Hide window instead of destroying it
-            self.after(500, self.open_main_page)  # Open main page after a delay
-        else:
-            messagebox.showerror("Error", "Username already exists!")
+        if len(password) < 8 or not re.search(r'\d', password) or not re.search(r'[A-Z]', password):
+            messagebox.showerror("Error",
+                                 "Password must be at least 8 characters long, with one number and one uppercase letter.")
+            return
 
-    def open_main_page(self):
-        try:
-            subprocess.Popen([sys.executable,r"C:\Users\User\PycharmProjects\4007\Main_page\main.py"])
-            self.destroy()
-        except Exception as e:
-            messagebox.showerror("Error", f"Could not open main_page.py: {e}")
+        conn = sqlite3.connect('Trackwise.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE username=?", (username,))
+
+        if cursor.fetchone():
+            messagebox.showerror("Error", "Username already exists!")
+            conn.close()
+            return
+
+        hashed_pw = self.hash_password(password)
+
+        cursor.execute("""INSERT INTO users (username, password,role) VALUES (?,?,?)""", (username, hashed_pw,role))
+        conn.commit()
+        conn.close()
+        messagebox.showinfo("Success", "User registered successfully!")
 
 if __name__ == "__main__":
     app = Register()
