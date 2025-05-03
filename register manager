@@ -1,0 +1,104 @@
+import customtkinter as ctk
+from PIL import Image
+from tkinter import messagebox
+import sqlite3
+import subprocess
+import sys
+import hashlib
+import re
+import bcrypt
+
+class Manager_Register(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+
+        self.Trackwise_db()
+        self.title("Manager Registration")
+        self.geometry("1920x974")
+        ctk.set_appearance_mode("light")
+
+        try:
+            background_image = Image.open(r"C:\Users\User\Documents\Ruxin file\ALL 2\manager register.png").resize((1920, 974))
+            ctk_background_image = ctk.CTkImage(light_image=background_image, dark_image=background_image, size=(1600, 800))
+            ctk.CTkLabel(self, image=ctk_background_image, text="").place(x=0, y=0,relwidth=1, relheight=1)
+        except Exception as e:
+            print(f"Error loading bot image: {e}")
+
+        main_frame = ctk.CTkFrame(self, fg_color="white", border_width=2, border_color="white",width=1184)
+        main_frame.place(relx=0.5, rely=0.658, anchor="center")
+
+        ctk.CTkLabel(main_frame, text="Username:", font=("Arial", 24)).pack(pady=(20,10),anchor='w')
+        self.username_entry = ctk.CTkEntry(main_frame, placeholder_text="Username", width=880, height=35,justify="center", font=("Arial", 20))
+        self.username_entry.pack()
+
+        ctk.CTkLabel(main_frame, text="Password:", font=("Arial", 24)).pack(pady=(20,10),anchor="w")
+        self.password_entry = ctk.CTkEntry(main_frame, placeholder_text="Password", show="*", width=880, height=35,justify="center", font=("Arial", 20))
+        self.password_entry.pack()
+
+        ctk.CTkLabel(main_frame, text="Confirm Password:", font=("Arial", 24)).pack(pady=(20,10),anchor="w")
+        self.confirm_password_entry = ctk.CTkEntry(main_frame, placeholder_text="Confirm Password", show="*",width=880,height=35, justify="center", font=("Arial", 20))
+        self.confirm_password_entry.pack()
+
+        ctk.CTkLabel(main_frame, text="User Role:", font=("Arial", 24)).pack(pady=(30,10),anchor="w")
+        self.role_entry = ctk.CTkEntry(main_frame, width=880, height=35, justify="center",font=("Arial", 20),text_color="grey")
+        self.role_entry.insert(0, "Manager")
+        self.role_entry.configure(state="disabled")
+        self.role_entry.pack()
+
+        # Register Button
+        ctk.CTkButton(main_frame, text="Register", width=300,height=30, fg_color="#2A50CB",hover_color="#1a39a3",command=self.register_manager).pack(pady=(30, 20))
+
+    def Trackwise_db(self):
+        conn = sqlite3.connect("Trackwise.db")
+        cursor = conn.cursor()
+        cursor.execute('''CREATE TABLE IF NOT EXISTS manager_users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            password TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'manager')''')
+        conn.commit()
+        conn.close()
+
+    def hash_password(self,password):
+        return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+    def register_manager(self):
+        username = self.username_entry.get().strip()
+        password = self.password_entry.get().strip()
+        confirm_password = self.confirm_password_entry.get().strip()
+
+        if not username or not password or not confirm_password:
+            messagebox.showerror("Error", "Fields cannot be empty!")
+            return
+
+        if password != confirm_password:
+            messagebox.showerror("Error", "Passwords do not match!")
+            return
+
+        if len(password) < 8 or not re.search(r'\d', password) or not re.search(r'[A-Z]', password):
+            messagebox.showerror("Error",
+                                 "Password must be at least 8 characters long, with one number and one uppercase letter.")
+            return
+
+        conn = sqlite3.connect('Trackwise.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM manager_users WHERE username=?", (username,))
+
+        if cursor.fetchone():
+            messagebox.showerror("Error", "Username already exists!")
+            conn.close()
+            return
+
+        hashed_pw = self.hash_password(password)
+
+        cursor.execute("""INSERT INTO manager_users (username, password,role) VALUES (?,?,?)""", (username, hashed_pw,"manager"))
+        conn.commit()
+        conn.close()
+        messagebox.showinfo("Success", "User registered successfully!")
+        self.destroy()
+        subprocess.Popen([sys.executable, r"C:\Users\User\PycharmProjects\ALL 2\manager login.py"])
+
+
+if __name__ == "__main__":
+    app = Manager_Register()
+    app.mainloop()
