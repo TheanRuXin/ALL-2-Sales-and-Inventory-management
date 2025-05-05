@@ -6,6 +6,9 @@ import subprocess
 import sys
 import hashlib
 import re
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 class Register(ctk.CTk):
     def __init__(self):
@@ -34,27 +37,31 @@ class Register(ctk.CTk):
         ctk.CTkLabel(main_frame, text="Create Account", font=("Arial", 48, "bold")).pack(pady=10)
 
         second_frame = ctk.CTkFrame(main_frame, fg_color="#FFFFFF", corner_radius=15)
-        second_frame.pack(pady=(20, 50),padx=100, fill="both", expand=True)
+        second_frame.pack(pady=(20, 50), padx=100, fill="both", expand=True)
 
-        ctk.CTkLabel(second_frame, text="Username:", font=("Arial", 24)).pack(pady=20,padx=30, anchor="w")
-        self.username_entry = ctk.CTkEntry(second_frame, placeholder_text="Username", width=880,height=40, justify="center",font=("Arial", 24))
+        ctk.CTkLabel(second_frame, text="Username:", font=("Arial", 24)).pack(pady=10, padx=30, anchor="w")
+        self.username_entry = ctk.CTkEntry(second_frame, placeholder_text="Username", width=880, height=35,justify="center", font=("Arial", 24))
         self.username_entry.pack()
 
-        ctk.CTkLabel(second_frame, text="Password:", font=("Arial", 24)).pack(pady=20,padx=30, anchor="w")
-        self.password_entry = ctk.CTkEntry(second_frame, placeholder_text="Password", show="*", width=880,height=40,justify="center",font=("Arial", 24))
+        ctk.CTkLabel(second_frame, text="Email:", font=("Arial", 24)).pack(pady=10, padx=30, anchor="w")
+        self.email_entry = ctk.CTkEntry(second_frame, placeholder_text="Email", width=880, height=35,justify="center", font=("Arial", 24))
+        self.email_entry.pack()
+
+        ctk.CTkLabel(second_frame, text="Password:", font=("Arial", 24)).pack(pady=10, padx=30, anchor="w")
+        self.password_entry = ctk.CTkEntry(second_frame, placeholder_text="Password", show="*", width=880, height=35,justify="center", font=("Arial", 24))
         self.password_entry.pack()
 
-        ctk.CTkLabel(second_frame, text="Confirm Password:", font=("Arial", 24)).pack(pady=20,padx=30, anchor="w")
-        self.confirm_password_entry = ctk.CTkEntry(second_frame, placeholder_text="Confirm Password", show="*", width=880,height=40,justify="center",font=("Arial", 24))
+        ctk.CTkLabel(second_frame, text="Confirm Password:", font=("Arial", 24)).pack(pady=10, padx=30, anchor="w")
+        self.confirm_password_entry = ctk.CTkEntry(second_frame, placeholder_text="Confirm Password", show="*",width=880, height=35, justify="center", font=("Arial", 24))
         self.confirm_password_entry.pack()
 
-        ctk.CTkLabel(second_frame, text="Select User Type:", font=("Arial", 24)).pack(pady=20,padx=30, anchor="w")
+        ctk.CTkLabel(second_frame, text="Select User Type:", font=("Arial", 24)).pack(pady=10, padx=30, anchor="w")
         self.role_var = ctk.StringVar(value="Select User Type")
-        self.role_dropdown = ctk.CTkComboBox(second_frame, values=["Admin", "Cashier"], variable=self.role_var,width=880,height=40)
+        self.role_dropdown = ctk.CTkComboBox(second_frame, values=["Admin", "Cashier"], variable=self.role_var,width=880, height=35)
         self.role_dropdown.pack()
 
-        # Register Button
-        ctk.CTkButton(second_frame, text="Register", width=300,height=30, fg_color="#2A50CB",hover_color="#1a39a3",command=self.register_user).pack(pady=(30, 10))
+        ctk.CTkButton(second_frame, text="Register", width=300, height=30, fg_color="#2A50CB", hover_color="#1a39a3",command=self.register_user).pack(pady=(30, 10))
+        self.back_button = ctk.CTkButton(main_frame, text="Back", width=100, height=30,fg_color="#2A50CB", hover_color="#1a39a3",command=self.back_to_dashboard).pack(pady=(1, 20), anchor='center')
 
     def Trackwise_db(self):
         conn = sqlite3.connect("Trackwise.db")
@@ -63,20 +70,52 @@ class Register(ctk.CTk):
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT NOT NULL,
         password TEXT NOT NULL,
-        role TEXT NOT NULL)''')
+        role TEXT NOT NULL,
+        email TEXT,
+        phone TEXT,
+        dob TEXT)''')
         conn.commit()
         conn.close()
 
     def hash_password(self,password):
         return hashlib.sha256(password.encode()).hexdigest()
 
+    def send_email(self, username, password, recipient_email):
+        sender_email = "your_email"  # Replace with your email
+        sender_password = "vvvv vvvv vvvv vvvv "  # Replace with your email password (use app password for Gmail)
+        subject = "Account Registration"
+        body = f"Dear {username},\n\nYour account has been successfully created.\n\nUsername: {username}\nPassword: {password}\n\nPlease keep your login credentials safe.\n\nBest Regards,\nTrackwise Support"
+
+        # Create the email
+        msg = MIMEMultipart()
+        msg['From'] = sender_email
+        msg['To'] = recipient_email
+        msg['Subject'] = subject
+
+        msg.attach(MIMEText(body, 'plain'))
+
+        # Connect to the server and send email
+        try:
+            with smtplib.SMTP('smtp.gmail.com', 587) as server:
+                server.starttls()
+                server.login(sender_email, sender_password)
+                server.sendmail(sender_email, recipient_email, msg.as_string())
+                print("Email sent successfully!")
+        except Exception as e:
+            print(f"Error sending email: {e}")
+
+    def back_to_dashboard(self):
+        self.destroy()
+        subprocess.Popen([sys.executable, r"C:\Users\User\PycharmProjects\ALL 2\Manager dashboard.py"])
+
     def register_user(self):
         username = self.username_entry.get().strip()
         password = self.password_entry.get().strip()
         confirm_password = self.confirm_password_entry.get().strip()
+        email = self.email_entry.get().strip()
         role = self.role_var.get()
 
-        if not username or not password or not confirm_password:
+        if not username or not password or not confirm_password or not email:
             messagebox.showerror("Error", "Fields cannot be empty!")
             return
 
@@ -104,10 +143,15 @@ class Register(ctk.CTk):
 
         hashed_pw = self.hash_password(password)
 
-        cursor.execute("""INSERT INTO users (username, password,role) VALUES (?,?,?)""", (username, hashed_pw,role))
+        cursor.execute("""INSERT INTO users (username, password,role,email) VALUES (?,?,?,?)""", (username, hashed_pw,role,email))
         conn.commit()
         conn.close()
         messagebox.showinfo("Success", "User registered successfully!")
+        recipient_email = email
+        self.send_email(username, password, recipient_email)
+        self.destroy()
+        subprocess.Popen([sys.executable, r"C:\Users\User\PycharmProjects\ALL 2\manager login.py"])
+
 
 if __name__ == "__main__":
     app = Register()
