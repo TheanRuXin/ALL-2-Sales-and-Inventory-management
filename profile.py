@@ -34,6 +34,7 @@ class UserProfileApp:
         self.load_profile_image()
         self.create_welcome_label()
         self.create_user_info_labels()
+        self.create_back_button()
 
     def get_user_data_from_db(self):
         try:
@@ -126,37 +127,54 @@ class UserProfileApp:
 
     def create_welcome_label(self):
         username = self.user_data['username'] if self.user_data else "User"
+        welcome_y = int(self.screen_height * 0.42)
         self.welcome_label = ctk.CTkLabel(
             master=self.main_frame,
             text=f"Welcome, {username}",
             font=("Inter", 30),
             text_color="#131010"
         )
-        self.welcome_label.place(x=int(self.screen_width * 0.095), y=int(self.screen_height * 0.42))
+        self.welcome_label.place(x=int(self.screen_width * 0.095), y=welcome_y)
+
+        # Add role below welcome message
+        if self.user_data and self.user_data['role']:
+            self.role_label = ctk.CTkLabel(
+                master=self.main_frame,
+                text=self.user_data["role"],
+                font=("Inter", 24),
+                text_color="#5E5E5E"
+            )
+            self.role_label.place(x=int(self.screen_width * 0.15), y=welcome_y + 40)
 
     def create_user_info_labels(self):
         if not self.user_data:
             return
 
-        user_info = [
+        # Left side: Username, Phone Number
+        left_info = [
             ("Username:", self.user_data["username"]),
-            ("Role:", self.user_data["role"]),
+            ("Phone Number:", self.user_data["phone"])
+        ]
+
+        # Right side: Email, Date of Birth
+        right_info = [
             ("Email:", self.user_data["email"]),
-            ("Phone Number:", self.user_data["phone"]),
             ("Date of Birth:", self.user_data["dob"])
         ]
 
-        start_y = int(self.screen_height * 0.10)
-        gap = int(self.screen_height * 0.12)
+        left_x = int(self.screen_width * 0.37)
+        right_x = int(self.screen_width * 0.68)
+        start_y = int(self.screen_height * 0.20)
+        gap = int(self.screen_height * 0.20)
 
-        for i, (label_text, value_text) in enumerate(user_info):
+        for i, (label_text, value_text) in enumerate(left_info):
             label = ctk.CTkLabel(
                 master=self.main_frame,
                 text=label_text,
                 font=("Inter", 30),
                 text_color="#000000"
             )
-            label.place(x=int(self.screen_width * 0.37), y=start_y + i * gap)
+            label.place(x=left_x, y=start_y + i * gap)
 
             value = ctk.CTkLabel(
                 master=self.main_frame,
@@ -164,7 +182,49 @@ class UserProfileApp:
                 font=("Inter", 25),
                 text_color="#796E6E"
             )
-            value.place(x=int(self.screen_width * 0.37), y=start_y + 44 + i * gap)
+            value.place(x=left_x, y=start_y + 44 + i * gap)
+
+        for i, (label_text, value_text) in enumerate(right_info):
+            label = ctk.CTkLabel(
+                master=self.main_frame,
+                text=label_text,
+                font=("Inter", 30),
+                text_color="#000000"
+            )
+            label.place(x=right_x, y=start_y + i * gap)
+
+            value = ctk.CTkLabel(
+                master=self.main_frame,
+                text=value_text,
+                font=("Inter", 25),
+                text_color="#796E6E"
+            )
+            value.place(x=right_x, y=start_y + 44 + i * gap)
+
+    def on_back_click(self):
+        role = self.user_data["role"].lower() if self.user_data and self.user_data["role"] else ""
+
+        if role == "admin":
+            subprocess.Popen([sys.executable, "admin_dashboard.py"])
+        elif role == "manager":
+            subprocess.Popen([sys.executable, "manager_dash.py"])
+        elif role == "cashier":
+            subprocess.Popen([sys.executable, "cashier_dashboard.py"])
+        else:
+            print("Unknown role. Cannot route to dashboard.")
+
+        self.root.destroy()
+
+    def create_back_button(self):
+        back_button = ctk.CTkButton(
+            master=self.main_frame,
+            text="← Back",
+            command=self.on_back_click,
+            width=100,
+            height=40,
+            font=("Inter", 16)
+        )
+        back_button.place(x=20, y=20)
 
 if __name__ == "__main__":
     initialize_database()
