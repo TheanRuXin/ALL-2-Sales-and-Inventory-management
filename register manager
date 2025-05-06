@@ -46,6 +46,8 @@ class Manager_Register(ctk.CTk):
 
         # Register Button
         ctk.CTkButton(main_frame, text="Register", width=300,height=30, fg_color="#2A50CB",hover_color="#1a39a3",command=self.register_manager).pack(pady=(30, 20))
+        ctk.CTkButton(self, text="<- Back", width=100, height=30,fg_color="#2A50CB", hover_color="#1a39a3",command=self.back_to_login).place(x=30, rely=0.97, anchor="sw")
+
 
     def Trackwise_db(self):
         conn = sqlite3.connect("Trackwise.db")
