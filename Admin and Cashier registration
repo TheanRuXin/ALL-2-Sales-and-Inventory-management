@@ -39,29 +39,46 @@ class Register(ctk.CTk):
         second_frame = ctk.CTkFrame(main_frame, fg_color="#FFFFFF", corner_radius=15)
         second_frame.pack(pady=(20, 50), padx=100, fill="both", expand=True)
 
-        ctk.CTkLabel(second_frame, text="Username:", font=("Arial", 24)).pack(pady=10, padx=30, anchor="w")
-        self.username_entry = ctk.CTkEntry(second_frame, placeholder_text="Username", width=880, height=35,justify="center", font=("Arial", 24))
-        self.username_entry.pack()
+        # Split into two columns inside second_frame
+        left_frame = ctk.CTkFrame(second_frame, fg_color="transparent")
+        left_frame.grid(row=0, column=0, padx=50, pady=20, sticky="n")
 
-        ctk.CTkLabel(second_frame, text="Email:", font=("Arial", 24)).pack(pady=10, padx=30, anchor="w")
-        self.email_entry = ctk.CTkEntry(second_frame, placeholder_text="Email", width=880, height=35,justify="center", font=("Arial", 24))
-        self.email_entry.pack()
+        right_frame = ctk.CTkFrame(second_frame, fg_color="transparent")
+        right_frame.grid(row=0, column=1, padx=50, pady=20, sticky="n")
 
-        ctk.CTkLabel(second_frame, text="Password:", font=("Arial", 24)).pack(pady=10, padx=30, anchor="w")
-        self.password_entry = ctk.CTkEntry(second_frame, placeholder_text="Password", show="*", width=880, height=35,justify="center", font=("Arial", 24))
-        self.password_entry.pack()
+        # Left side: Username, Email, Role
+        ctk.CTkLabel(left_frame, text="Username:", font=("Arial", 24)).pack(pady=(10,5), anchor="w")
+        self.username_entry = ctk.CTkEntry(left_frame, placeholder_text="Username", width=350, height=35,justify="center", font=("Arial", 24))
+        self.username_entry.pack(pady=(0, 30))
 
-        ctk.CTkLabel(second_frame, text="Confirm Password:", font=("Arial", 24)).pack(pady=10, padx=30, anchor="w")
-        self.confirm_password_entry = ctk.CTkEntry(second_frame, placeholder_text="Confirm Password", show="*",width=880, height=35, justify="center", font=("Arial", 24))
-        self.confirm_password_entry.pack()
+        ctk.CTkLabel(left_frame, text="Email:", font=("Arial", 24)).pack(pady=(10,5), anchor="w")
+        self.email_entry = ctk.CTkEntry(left_frame, placeholder_text="Email", width=350, height=35, justify="center",font=("Arial", 24))
+        self.email_entry.pack(pady=(0, 30))
 
-        ctk.CTkLabel(second_frame, text="Select User Type:", font=("Arial", 24)).pack(pady=10, padx=30, anchor="w")
+        ctk.CTkLabel(left_frame, text="Select User Type:", font=("Arial", 24)).pack(pady=(10,5), anchor="w")
         self.role_var = ctk.StringVar(value="Select User Type")
-        self.role_dropdown = ctk.CTkComboBox(second_frame, values=["Admin", "Cashier"], variable=self.role_var,width=880, height=35)
-        self.role_dropdown.pack()
+        self.role_dropdown = ctk.CTkComboBox(left_frame, values=["Admin", "Cashier"], variable=self.role_var, width=350,height=35)
+        self.role_dropdown.pack(pady=(0, 30))
 
-        ctk.CTkButton(second_frame, text="Register", width=300, height=30, fg_color="#2A50CB", hover_color="#1a39a3",command=self.register_user).pack(pady=(30, 10))
-        self.back_button = ctk.CTkButton(main_frame, text="Back", width=100, height=30,fg_color="#2A50CB", hover_color="#1a39a3",command=self.back_to_dashboard).pack(pady=(1, 20), anchor='center')
+        # Right side: Password and Confirm Password
+        ctk.CTkLabel(right_frame, text="Phone Number:", font=("Arial", 24)).pack(pady=(10, 5), anchor="w")
+        self.phone_entry = ctk.CTkEntry(right_frame, placeholder_text="ex:012-1234567", width=350, height=35,justify="center", font=("Arial", 24))
+        self.phone_entry.pack(pady=(0, 30))
+
+        ctk.CTkLabel(right_frame, text="Password:", font=("Arial", 24)).pack(pady=(10,5), anchor="w")
+        self.password_entry = ctk.CTkEntry(right_frame, placeholder_text="Password", show="*", width=350, height=35,justify="center", font=("Arial", 24))
+        self.password_entry.pack(pady=(0, 30))
+
+        ctk.CTkLabel(right_frame, text="Confirm Password:", font=("Arial", 24)).pack(pady=(10,5), anchor="w")
+        self.confirm_password_entry = ctk.CTkEntry(right_frame, placeholder_text="Confirm Password", show="*",width=350, height=35, justify="center", font=("Arial", 24))
+        self.confirm_password_entry.pack(pady=(0, 30))
+
+        # Register button centered across both columns
+        ctk.CTkButton(second_frame, text="Register", width=250, height=30, fg_color="#2A50CB", hover_color="#1a39a3",command=self.register_user).grid(row=1, column=0, columnspan=2, pady=(30, 10))
+
+        # Back button
+        self.back_button = ctk.CTkButton(main_frame, text="Back", width=100, height=30, fg_color="#2A50CB",hover_color="#1a39a3", command=self.back_to_dashboard)
+        self.back_button.pack(pady=(1, 20), anchor='center')
 
     def Trackwise_db(self):
         conn = sqlite3.connect("Trackwise.db")
@@ -81,8 +98,8 @@ class Register(ctk.CTk):
         return hashlib.sha256(password.encode()).hexdigest()
 
     def send_email(self, username, password, recipient_email):
-        sender_email = "your_email"  # Replace with your email
-        sender_password = "vvvv vvvv vvvv vvvv "  # Replace with your email password (use app password for Gmail)
+        sender_email = "ruxinthean@gmail.com"  # Replace with your email
+        sender_password = "vznn pcdo pnol oiqf"  # Replace with your email password (use app password for Gmail)
         subject = "Account Registration"
         body = f"Dear {username},\n\nYour account has been successfully created.\n\nUsername: {username}\nPassword: {password}\n\nPlease keep your login credentials safe.\n\nBest Regards,\nTrackwise Support"
 
@@ -111,11 +128,12 @@ class Register(ctk.CTk):
     def register_user(self):
         username = self.username_entry.get().strip()
         password = self.password_entry.get().strip()
+        phone = self.phone_entry.get().strip()
         confirm_password = self.confirm_password_entry.get().strip()
         email = self.email_entry.get().strip()
         role = self.role_var.get()
 
-        if not username or not password or not confirm_password or not email:
+        if not username or not password or not confirm_password or not email or not phone:
             messagebox.showerror("Error", "Fields cannot be empty!")
             return
 
@@ -143,7 +161,7 @@ class Register(ctk.CTk):
 
         hashed_pw = self.hash_password(password)
 
-        cursor.execute("""INSERT INTO users (username, password,role,email) VALUES (?,?,?,?)""", (username, hashed_pw,role,email))
+        cursor.execute("""INSERT INTO users (username, password,role,email,phone) VALUES (?,?,?,?,?)""", (username, hashed_pw,role,email,phone))
         conn.commit()
         conn.close()
         messagebox.showinfo("Success", "User registered successfully!")
