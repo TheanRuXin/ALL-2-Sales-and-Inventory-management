@@ -4,7 +4,7 @@ from tkcalendar import DateEntry
 from tkinter import ttk
 import matplotlib.pyplot as plt
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter, landscape
+from reportlab.lib.pagesizes import letter, landscape, A4
 from reportlab.platypus import  SimpleDocTemplate, Table , TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 import os
@@ -50,26 +50,26 @@ class SalesHistoryApp(ctk.CTk):
         self.frame = ctk.CTkFrame(self, fg_color="white", border_color="white", width=1300, height=550)
         self.frame.place(relx=0.50, rely=0.85, anchor="s")
 
-        self.left_frame = ctk.CTkFrame(self.frame, fg_color="white", width=300, height=500)
-        self.right_frame = ctk.CTkFrame(self.frame, fg_color="transparent", width=950, height=500)
+        self.left_frame = ctk.CTkFrame(self.frame, fg_color="white", width=300, height=550)
+        self.right_frame = ctk.CTkFrame(self.frame, fg_color="transparent", width=950, height=550)
 
         # Left frame widgets
-        ctk.CTkLabel(self.left_frame, text="From:", font=("Arial", 20)).place(x=10, y=10, anchor="w")
+        ctk.CTkLabel(self.left_frame, text="From:", font=("Arial", 24)).place(x=10, y=9, anchor="w")
         DateEntry(self.left_frame, textvariable=self.from_date_var, width=15, date_pattern="yyyy-mm-dd",font=("Arial", 12), justify="center").place(x=10, y=40,width=300,height=30)
 
-        ctk.CTkLabel(self.left_frame, text="To:", font=("Arial", 18),).place(x=10, y=90,anchor="w")
+        ctk.CTkLabel(self.left_frame, text="To:", font=("Arial", 24),).place(x=10, y=90,anchor="w")
         DateEntry(self.left_frame, textvariable=self.to_date_var, width=15, date_pattern="yyyy-mm-dd",
                   font=("Arial", 12),justify="center").place(x=10, y=140,width=300,height=30)
 
-        ctk.CTkLabel(self.left_frame, text="Category:", font=("Arial", 18)).place(x=10, y=160)
+        ctk.CTkLabel(self.left_frame, text="Category:", font=("Arial", 24)).place(x=10, y=160)
         self.category_dropdown = ctk.CTkComboBox(self.left_frame, variable=self.category_var,values=self.fetch_categories(),width=238,height=30)
         self.category_dropdown.place(x=10, y=200)
         self.category_dropdown.set("All")
 
-        ctk.CTkButton(self.left_frame, text="Filter", command=self.fetch_sales_data, width=238, height=35,fg_color="#2155CD").place(x=10, y=250)
-        ctk.CTkButton(self.left_frame, text="Print Report", command=self.generate_pdf_report, width=238, height=35,fg_color="#2155CD").place(x=10, y=300)
-        ctk.CTkButton(self.left_frame, text="Generate Sales Chart", command=self.generate_sales_chart, width=238,height=35,fg_color="#2155CD").place(x=10, y=350)
-        ctk.CTkButton(self.left_frame, text="Back To Dashboard", command=self.back_to_dashboard, width=238,height=35, fg_color="#2155CD").place(x=10, y=400)
+        ctk.CTkButton(self.left_frame, text="Filter", command=self.fetch_sales_data, width=238, height=35,fg_color="#2155CD").place(x=10, y=270)
+        ctk.CTkButton(self.left_frame, text="Print Report", command=self.generate_pdf_report, width=238, height=35,fg_color="#2155CD").place(x=10, y=340)
+        ctk.CTkButton(self.left_frame, text="Generate Sales Chart", command=self.generate_sales_chart, width=238,height=35,fg_color="#2155CD").place(x=10, y=410)
+        ctk.CTkButton(self.left_frame, text="Back To Dashboard", command=self.back_to_dashboard, width=238,height=35, fg_color="#2155CD").place(x=10, y=480)
 
         # Treeview in right frame
         columns = ("Date", "Item Name", "Category", "Quantity Sold", "Total Price (RM)")
@@ -77,10 +77,10 @@ class SalesHistoryApp(ctk.CTk):
         for col in columns:
             self.tree.heading(col, text=col)
             self.tree.column(col, anchor="center", width=140)
-        self.tree.place(x=0, y=0, width=1185, height=420)
+        self.tree.place(relx=0.5, rely=0.8, anchor="s", width=1185, height=540)
 
-        self.total_label = ctk.CTkLabel(self.right_frame, text="Total Sales: RM0.00", font=("Arial", 16,"bold"))
-        self.total_label.place(x=10, y=350)
+        self.total_label = ctk.CTkLabel(self.right_frame, text="Total Sales: RM0.00", font=("Arial", 24,"bold"))
+        self.total_label.place(x=10, y=480)
 
         self.after(100, self.place_frames_at_bottom)
 
@@ -129,7 +129,7 @@ class SalesHistoryApp(ctk.CTk):
         store_address = " 13 Lorong 5 Taman Bunga, 15000 Bukit Jambut, Pulau Pinang"
         store_contact = "Phone: 012-345 6789"
 
-        data = [("Data","Item","Category","Quantity","Total Pice(RM)")]
+        data = [("Date","Item","Category","Quantity","Total Pice(RM)")]
         grand_total = 0.0
 
         for item in self.tree.get_children():
@@ -143,7 +143,7 @@ class SalesHistoryApp(ctk.CTk):
         data.append(("","","","Grand Total",f"{grand_total:.2f}"))
 
         pdf_file = "Sales_Report.pdf"
-        pdf = SimpleDocTemplate(pdf_file,pagesize=landscape(letter))
+        pdf = SimpleDocTemplate(pdf_file,pagesize=A4)
         elements = []
 
         styles = getSampleStyleSheet()
@@ -153,12 +153,12 @@ class SalesHistoryApp(ctk.CTk):
         elements.append(Spacer(1,12))
         table = Table(data)
         table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
-                ('BACKGROUND', (0, 1), (-1, -2), colors.beige),
+                ('BACKGROUND', (0, 1), (-1, -2), colors.white),
                 ('GRID', (0, 0), (-1, -1), 1, colors.black),
                 ('BACKGROUND', (0, -1), (-1, -1), colors.lightgrey),
                 ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
