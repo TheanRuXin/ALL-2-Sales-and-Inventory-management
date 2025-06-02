@@ -1,4 +1,5 @@
 import sqlite3
+import subprocess
 import customtkinter as ctk
 from tkinter import messagebox
 from PIL import Image
@@ -8,7 +9,7 @@ import certifi
 import random
 from email.message import EmailMessage
 
-class Reset_Password:
+class Forget_Password:
     def __init__(self,root):
         self.root = root
         self.root.title("Reset Password")
@@ -25,12 +26,14 @@ class Reset_Password:
         self.email = ""
 
         self.set_ui()
+        self.initialize_db()
 
     def initialize_db(self):
         conn = sqlite3.connect("Trackwise.db")
         cursor = conn.cursor()
         cursor.execute('''CREATE TABLE IF NOT EXISTS users (
                              id INTEGER PRIMARY KEY AUTOINCREMENT,
+                             username TEXT NOT NULL,
                              role TEXT NOT NULL,
                              email TEXT NOT NULL,
                              phone TEXT NOT NULL,
@@ -79,8 +82,8 @@ class Reset_Password:
                                        font=("Iter", 14), command=self.send_otp)
         otp_button.place(x=1000 / 1920 * root.winfo_screenwidth(), y=155 / 974 * root.winfo_screenheight())
 
-        # Reset Password
-        reset_button = ctk.CTkButton(self.root, text="Reset Password", bg_color="#D9D9D9", fg_color="Blue",
+        # Verify
+        reset_button = ctk.CTkButton(self.root, text="Verify", bg_color="#D9D9D9", fg_color="Blue",
                                        text_color="white",
                                        border_color="#1572D3", width=129, height=35,
                                        font=("Iter", 14), command=self.verify_otp)
@@ -122,12 +125,12 @@ class Reset_Password:
 
         self.otp_code = str(random.randint(100000, 999999))
 
-        sender_email = "Your Email"
+        sender_email = "Your Gmail"
         password = "App Password"  # Use Gmail App Password
         subject = "Reset Password OTP"
         body = (f"Hi {username_input},\n\nYour OTP for password reset is: {self.otp_code}"
                 f"\n\nDo not give this code to anyone, even if they said they are from Trackwise Inventory."
-                f"\n\nThis code can be used to Reset Your Tracwise account."
+                f"\n\nThis code can be used to Reset Your Trackwise account."
                 f"\n\nIf you didn't request for this code, simply ignore this message"
                 f"\n\nThank you.")
 
@@ -150,13 +153,22 @@ class Reset_Password:
             messagebox.showerror("Error", f"Failed to send OTP: {e}")
 
     def verify_otp(self):
-        if self.code.get() == self.otp_code:
+        if not self.code.get():
+            messagebox.showerror("Error", "OTP field cannot be empty.")
+
+        elif self.code.get() == self.otp_code:
             messagebox.showinfo("Success", "OTP verified. Proceed to reset password.")
-            # Optionally call password reset UI here
+
+            with open("reset_user.txt", "w") as f:
+                f.write(self.username.get())
+
+            subprocess.Popen(["python", "Reset_Password.py"])
+            self.root.destroy()
+
         else:
             messagebox.showerror("Error", "Invalid OTP. Please try again.")
-
+            self.code.set("")
 
 root = ctk.CTk()
-app = Reset_Password(root)
+app = Forget_Password(root)
 root.mainloop()
