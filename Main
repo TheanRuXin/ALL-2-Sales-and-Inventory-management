@@ -1,0 +1,43 @@
+import customtkinter as ctk
+from PIL import Image
+import subprocess
+import sys
+
+
+class Main(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+
+        self.geometry("1920x974")
+        ctk.set_appearance_mode("light")
+
+        # Create the frame for the background image
+        picture_frame = ctk.CTkFrame(self, width=1547, height=974)
+        picture_frame.place(x=0, y=0)
+
+        try:
+            background_dashboard = Image.open(r"C:\Users\User\Documents\Ruxin file\ALL 2\main.png").resize((1547, 800))
+            ctk_background_dashboard = ctk.CTkImage(light_image=background_dashboard, dark_image=background_dashboard,size=(1547, 800))
+
+            background_dashboard_label = ctk.CTkLabel(picture_frame, image=ctk_background_dashboard, text="")
+            background_dashboard_label.place(x=0, y=0)
+        except Exception as e:
+            print(f"Error loading login image: {e}")
+
+        bold_arial_font = ctk.CTkFont(family="Arial", size=50, weight="bold")
+        ctk.CTkButton(self, text="Manager", font=bold_arial_font,fg_color="#2A50CB",hover_color="#1a39a3",width=550,height=100,text_color="#FFFFFF",corner_radius=50,command=self.manager_login).place(x=500, y=200)
+        ctk.CTkButton(self, text="Admin", font=bold_arial_font,fg_color="#2A50CB",hover_color="#1a39a3",width=550,height=100,text_color="#FFFFFF",corner_radius=50,command=self.admin_login).place(x=500, y=350)
+        ctk.CTkButton(self, text="Cashier", font=bold_arial_font,fg_color="#2A50CB",hover_color="#1a39a3",width=550,height=100,text_color="#FFFFFF",corner_radius=50,command=self.cashier_login).place(x=500, y=500)
+    def manager_login(self):
+        self.destroy()
+        subprocess.Popen([sys.executable,r"C:\Users\User\PycharmProjects\ALL 2\manager login.py"])
+    def admin_login(self):
+        self.destroy()
+        subprocess.Popen([sys.executable,r])
+    def cashier_login(self):
+        self.destroy()
+        subprocess.Popen([sys.executable,r])
+
+
+if __name__ == "__main__":
+    Main().mainloop()
