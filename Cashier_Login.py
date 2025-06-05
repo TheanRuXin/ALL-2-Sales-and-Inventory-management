@@ -5,7 +5,7 @@ from tkinter import messagebox, StringVar
 from PIL import Image
 import subprocess
 
-class Manager_Login:
+class Cashier_Login:
     def __init__(self,root):
         self.root = root
         self.root.title("Inventory Management System")
@@ -138,6 +138,6 @@ class Manager_Login:
 
 root = ctk.CTk()
 
-app = Manager_Login(root)
+app = Cashier_Login(root)
 
 root.mainloop()
