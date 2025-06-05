@@ -119,7 +119,7 @@ class Reset_Password:
 
             messagebox.showinfo("Success", "Password reset successfully!")
 
-            # Delete the temporary username file
+            # Delete the temporary "username" file
             try:
                 os.remove("reset_user.txt")
             except FileNotFoundError:

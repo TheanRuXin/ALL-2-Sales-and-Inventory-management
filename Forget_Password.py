@@ -125,8 +125,8 @@ class Forget_Password:
 
         self.otp_code = str(random.randint(100000, 999999))
 
-        sender_email = "Your Gmail"
-        password = "App Password"  # Use Gmail App Password
+        sender_email = "rsdharvin@gmail.com"
+        password = "zlds drvs srlz ipeq"  # Use Gmail App Password
         subject = "Reset Password OTP"
         body = (f"Hi {username_input},\n\nYour OTP for password reset is: {self.otp_code}"
                 f"\n\nDo not give this code to anyone, even if they said they are from Trackwise Inventory."
