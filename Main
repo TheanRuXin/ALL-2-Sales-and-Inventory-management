@@ -1,43 +1,114 @@
+import sys
+import pickle
 import customtkinter as ctk
 from PIL import Image
-import subprocess
-import sys
+import os
+
+# Page imports
+from dashboard_page import load_dashboard_content
+from user_page import UserPage
+from sales_report import load_sales_report_content
+from home_page import load_home_content
+from settings_page import load_settings_content
+from categories_pages import CategoriesPage
 
 
-class Main(ctk.CTk):
-    def __init__(self):
+ctk.set_appearance_mode("light")
+ctk.set_default_color_theme("blue")
+
+
+class POSApp(ctk.CTk):
+    def __init__(self, user_data):
         super().__init__()
 
-        self.geometry("1920x974")
-        ctk.set_appearance_mode("light")
+        self.user_data = user_data  # full tuple from Trackwise.db
+        self.username = user_data[1]  # assuming second field is username
 
-        # Create the frame for the background image
-        picture_frame = ctk.CTkFrame(self, width=1547, height=974)
-        picture_frame.place(x=0, y=0)
+        self.title("Trackwise")
+        self.geometry("1290x700")
+        self.iconbitmap("images/favicon (3).ico")
+        self.nav_items = ["dashboard", "user", "sales", "home", "tag", "settings"]
+        self.icons = {}
+        self.buttons = {}
+        self.active_button = None
 
-        try:
-            background_dashboard = Image.open(r"C:\Users\User\Documents\Ruxin file\ALL 2\main.png").resize((1547, 800))
-            ctk_background_dashboard = ctk.CTkImage(light_image=background_dashboard, dark_image=background_dashboard,size=(1547, 800))
+        self.create_sidebar()
+        self.create_content_area()
+        self.load_page("dashboard")
 
-            background_dashboard_label = ctk.CTkLabel(picture_frame, image=ctk_background_dashboard, text="")
-            background_dashboard_label.place(x=0, y=0)
-        except Exception as e:
-            print(f"Error loading login image: {e}")
+    def create_sidebar(self):
+        sidebar = ctk.CTkFrame(self, width=150, fg_color="#cce7f9", corner_radius=0)
+        sidebar.pack(side="left", fill="y")
 
-        bold_arial_font = ctk.CTkFont(family="Arial", size=50, weight="bold")
-        ctk.CTkButton(self, text="Manager", font=bold_arial_font,fg_color="#2A50CB",hover_color="#1a39a3",width=550,height=100,text_color="#FFFFFF",corner_radius=50,command=self.manager_login).place(x=500, y=200)
-        ctk.CTkButton(self, text="Admin", font=bold_arial_font,fg_color="#2A50CB",hover_color="#1a39a3",width=550,height=100,text_color="#FFFFFF",corner_radius=50,command=self.admin_login).place(x=500, y=350)
-        ctk.CTkButton(self, text="Cashier", font=bold_arial_font,fg_color="#2A50CB",hover_color="#1a39a3",width=550,height=100,text_color="#FFFFFF",corner_radius=50,command=self.cashier_login).place(x=500, y=500)
-    def manager_login(self):
-        self.destroy()
-        subprocess.Popen([sys.executable,r"C:\Users\User\PycharmProjects\ALL 2\manager login.py"])
-    def admin_login(self):
-        self.destroy()
-        subprocess.Popen([sys.executable,r])
-    def cashier_login(self):
-        self.destroy()
-        subprocess.Popen([sys.executable,r])
+        btn_container = ctk.CTkFrame(sidebar, fg_color="transparent")
+        btn_container.pack(expand=True)
+
+        for item in self.nav_items:
+            img_path = os.path.join("images", f"{item}.png")
+            if os.path.exists(img_path):
+                self.icons[item] = ctk.CTkImage(Image.open(img_path), size=(40, 40))
+            else:
+                self.icons[item] = None
+
+            btn = ctk.CTkButton(
+                btn_container,
+                image=self.icons[item],
+                text="",
+                width=50,
+                height=50,
+                fg_color="transparent",
+                hover=True,
+                command=lambda name=item: self.load_page(name)
+            )
+            btn.pack(pady=10)
+            self.buttons[item] = btn
+
+    def create_content_area(self):
+        self.content_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.content_frame.pack(side="right", expand=True, fill="both")
+
+    def clear_content(self):
+        for widget in self.content_frame.winfo_children():
+            widget.destroy()
+
+    def set_active_button(self, name):
+        for key, btn in self.buttons.items():
+            if key == name:
+                btn.configure(corner_radius=0, fg_color="#ffffff", width=61, height=60)
+            else:
+                btn.configure(corner_radius=0, fg_color="transparent", width=50, height=50)
+        self.active_button_name = name
+
+    def load_page(self, name):
+        self.clear_content()
+        self.set_active_button(name)
+
+        if name == "dashboard":
+            load_dashboard_content(self.content_frame, self.username)
+
+        elif name == "user":
+            UserPage(self.content_frame, username=self.username)
+        elif name == "sales":
+            load_sales_report_content(self.content_frame)
+
+        elif name == "home":
+            load_home_content(self.content_frame)
+        elif name == "tag":
+            CategoriesPage(self.content_frame)
+        elif name == "settings":
+            load_settings_content(self.content_frame)
+        else:
+            ctk.CTkLabel(self.content_frame, text=f"{name.capitalize()} Page Coming Soon...",
+                         font=("Arial", 20)).pack(pady=50)
 
 
 if __name__ == "__main__":
-    Main().mainloop()
+    if len(sys.argv) < 2:
+        print("❌ No user data file passed.")
+        sys.exit(1)
+
+    with open(sys.argv[1], 'rb') as f:
+        user_data = pickle.load(f)
+
+    app = POSApp(user_data)
+    app.mainloop()
