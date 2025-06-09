@@ -58,7 +58,7 @@ class InventoryDetails(ctk.CTk):
                                            width=140, height=35, font=("Inter", 16))
         self.button_search.place(x=450, y=35)
 
-        self.button_report = ctk.CTkButton(self.frame, text="Print Report", command=self.generate_pdf,
+        self.button_report = ctk.CTkButton(self.frame, text="Generate Report", command=self.generate_pdf,
                                            width=150, height=35, font=("Inter", 16))
         self.button_report.place(x=1100, y=35)
 
@@ -185,9 +185,12 @@ class InventoryDetails(ctk.CTk):
         filename = filedialog.asksaveasfilename(
             defaultextension=".pdf",
             filetypes=[("PDF files", "*.pdf")],
-            initialfile="inventory_report.pdf",  # Default filename
+            initialfile="inventory_report.pdf",
             title="Save Inventory Report"
         )
+
+        if not filename:
+            return  # User cancelled the save dialog
         doc = SimpleDocTemplate(filename, pagesize=landscape(letter))
         elements = []
 
