@@ -130,10 +130,21 @@ class EditProfileApp:
 
         if result:
             username, email, phone, dob, photo_path = result
+            username = username or "".strip()
+            email = email or ""
+            phone = phone or ""
+            dob = dob or "01/01/2000"
+
             self.entries["Username"].insert(0, username)
             self.entries["Email"].insert(0, email)
             self.entries["Phone Number"].insert(0, phone)
-            self.dob_calendar.set_date(datetime.strptime(dob, "%d/%m/%Y"))  # Set the date on the calendar
+            if dob:
+                try:
+                    self.dob_calendar.set_date(datetime.strptime(dob, "%d/%m/%Y"))
+                except ValueError:
+                    print("Invalid DOB format in DB:", dob)
+            else:
+                self.dob_calendar.set_date(datetime.today())
             self.photo_path = photo_path
 
             if photo_path and os.path.exists(photo_path):
@@ -184,6 +195,8 @@ class EditProfileApp:
         return True
 
     def validate_dob(self, dob):
+        if not dob:
+            return True  # optional
         try:
             datetime.strptime(dob, "%d/%m/%Y")
         except ValueError:
@@ -192,44 +205,52 @@ class EditProfileApp:
         return True
 
     def validate_password(self, password):
-        if len(password) < 8:
-            messagebox.showerror("Error", "Password must be at least 8 characters.")
+        if len(password) < 8 or not re.search(r'\d', password) or not re.search(r'[A-Z]', password):
+            messagebox.showerror("Error",
+                                 "Password must be at least 8 characters long, with one number and one uppercase letter.")
             return False
         return True
 
     def save_changes(self):
-        username = self.entries["Username"].get()
-        email = self.entries["Email"].get()
-        phone = self.entries["Phone Number"].get()
-        dob = self.dob_calendar.get_date().strftime("%d/%m/%Y")  # Get date from calendar
+        username = self.entries["Username"].get().strip()
+        email = self.entries["Email"].get().strip()
+        phone = self.entries["Phone Number"].get().strip()
+        dob_value = self.dob_calendar.get()
+        dob = dob_value.strip() if dob_value else None
+        if dob:
+            if not self.validate_dob(dob):
+                return
+        else:
+            dob = None
 
         old_pw = self.entries["Old Password"].get()
         new_pw = self.entries["New Password"].get()
         confirm_pw = self.entries["Confirm Password"].get()
 
-        if not self.validate_email(email):
+        # Optional validations only if value is provided
+        if email and not self.validate_email(email):
             return
-        if not self.validate_phone(phone):
+        if phone and not self.validate_phone(phone):
             return
-        if not self.validate_dob(dob):
+        if dob and not self.validate_dob(dob):
             return
 
         conn = sqlite3.connect("Trackwise.db")
         cursor = conn.cursor()
 
-        # Get current hashed password
-        cursor.execute("SELECT password FROM users WHERE user_id = ?", (self.user_id,))
+        # Get current data
+        cursor.execute("SELECT password, username, email, phone, dob, photo_path FROM users WHERE user_id = ?",
+                       (self.user_id,))
         result = cursor.fetchone()
 
-        if result is None:
+        if not result:
             messagebox.showerror("Error", "User not found.")
             conn.close()
             return
 
-        # Convert stored password string to bytes
-        current_hashed_pw = result[0]
+        current_hashed_pw, current_username, current_email, current_phone, current_dob, current_photo_path = result
 
-        # If changing password
+        # Password update logic (same as before)
         if old_pw or new_pw or confirm_pw:
             if not (old_pw and new_pw and confirm_pw):
                 messagebox.showerror("Error", "Please fill all password fields.")
@@ -251,10 +272,14 @@ class EditProfileApp:
 
             new_hashed_pw = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
         else:
-            new_hashed_pw = current_hashed_pw  # no change
+            new_hashed_pw = current_hashed_pw
 
-        # Optional photo update
-        photo_path = getattr(self, "photo_path", None)
+        # Save empty strings or None explicitly if user clears them
+        username = username if username != "" else None
+        email = email if email != "" else None
+        phone = phone if phone != "" else None
+        dob = dob if dob != "" else None
+        photo_path = self.photo_path if self.photo_path else None
 
         cursor.execute("""
             UPDATE users
@@ -266,16 +291,18 @@ class EditProfileApp:
         conn.close()
         messagebox.showinfo("Success", "Profile updated successfully.")
 
-        for entry in self.entries.values():
-            entry.delete(0, 'end')  # Clear each entry
-
-            # Redirect to profile page or close the window
-        self.root.destroy()  # Close the current window
-        subprocess.Popen([sys.executable, "profile.py"])
+        # Reload profile page
+        for widget in self.root.winfo_children():
+            widget.destroy()
+        from profile import UserProfileApp
+        UserProfileApp(self.root, self.user_id)
 
     def cancel_edit(self):
-        subprocess.Popen([sys.executable, "profile.py"])
-        self.root.destroy()
+        from profile import UserProfileApp
+        for widget in self.root.winfo_children():
+            widget.destroy()
+        UserProfileApp(self.root, self.user_id)
+
 
 if __name__ == "__main__":
     user_id = 1  # Replace with the actual logged-in user's ID
