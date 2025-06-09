@@ -102,8 +102,7 @@ class UserProfileApp:
         self.edit_button.place(x=self.screen_width - 260, y=66)
 
     def on_edit_click(self):
-        subprocess.Popen([sys.executable, "profile_edit.py"])
-        self.root.destroy()
+        self.load_edit_page()
 
     def load_profile_image(self):
         try:
@@ -225,6 +224,14 @@ class UserProfileApp:
             font=("Inter", 16)
         )
         back_button.place(x=20, y=20)
+
+    def load_edit_page(self):
+        from profile_edit import EditProfileApp
+        # Clear all widgets from the current window
+        for widget in self.root.winfo_children():
+            widget.destroy()
+        EditProfileApp(self.root, self.user_id)
+
 
 if __name__ == "__main__":
     initialize_database()
