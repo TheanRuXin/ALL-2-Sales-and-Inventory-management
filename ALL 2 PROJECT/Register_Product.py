@@ -1,146 +1,210 @@
-import customtkinter as ctk
+import os
 import sqlite3
-import subprocess
+import qrcode
+import customtkinter as ctk
+from PIL import Image, ImageTk
 from tkinter import messagebox
+from datetime import datetime
+import subprocess
+import random
+import string
+import socket
 
-class AddCategoryWindow:
+QR_FOLDER = "qrcodes"
+
+def generate_unique_product_id():
+    letters = ''.join(random.choices(string.ascii_uppercase, k=5))
+    numbers = ''.join(random.choices(string.digits, k=8))
+    return f"{letters}{numbers}"
+
+class Manager_Login:
     def __init__(self, root):
         self.root = root
-        self.root.title("Add / Remove Category")
-        self.root.geometry("500x420")
-        self.root.resizable(True, True)
+        self.root.title("Inventory Management System")
+        self.root.geometry("1920x974")
 
+        self.width = self.root.winfo_screenwidth()
+        self.height = self.root.winfo_screenheight()
+
+        background_image = ctk.CTkImage(Image.open("Register_Product.png"), size=(self.width, self.height - 71))
+        background_image_label = ctk.CTkLabel(self.root, image=background_image, text="")
+        background_image_label.place(relx=0, rely=0)
+
+        self.categories = []
+        self.initialize_database()
+        self.load_categories()
         self.create_widgets()
 
-    def create_widgets(self):
-        # Add Category Section
-        self.label_add = ctk.CTkLabel(self.root, text="Enter New Category:", font=("Arial", 20))
-        self.label_add.pack(pady=(20, 5))
-
-        self.category_var = ctk.StringVar()
-        self.entry_add = ctk.CTkEntry(
-            self.root,
-            textvariable=self.category_var,
-            font=("Arial", 16),
-            width=300,
-            placeholder_text="Type new category here"
-        )
-        self.entry_add.pack(pady=5)
-
-        self.add_button = ctk.CTkButton(self.root, text="Add Category", command=self.add_category)
-        self.add_button.pack(pady=(5, 15))
-
-        self.entry_add.bind("<Return>", lambda event: self.add_category())
-
-        # Remove Category Section
-        self.label_remove = ctk.CTkLabel(self.root, text="Select Category to Remove:", font=("Arial", 20))
-        self.label_remove.pack(pady=(10, 5))
-
-        self.remove_var = ctk.StringVar()
-        self.dropdown_remove = ctk.CTkComboBox(
-            master=self.root,
-            variable=self.remove_var,
-            values=[],  # Will be set later
-            width=300,
-            font=("Arial", 16),
-            text_color="#0882c4",
-            fg_color="white",
-            border_color="gray",
-            border_width=2,
-            dropdown_fg_color="#cce7f9",
-            dropdown_text_color="#014894",
-            dropdown_font=("Inter", 14),
-            dropdown_hover_color="#8dc0f7",
-            button_color="#0C5481",
-            button_hover_color="#2874ed"
-        )
-        self.dropdown_remove.pack(pady=5)
-
-        self.remove_button = ctk.CTkButton(self.root, text="Remove Category", fg_color="red", command=self.remove_category)
-        self.remove_button.pack(pady=(5, 15))
-
-        self.cancel_button = ctk.CTkButton(self.root, text="Cancel", fg_color="green", command=self.root.destroy)
-        self.cancel_button.pack(pady=5)
-
-        self.back_button = ctk.CTkButton(self.root, text="Back", fg_color="#2A50CB", command=self.go_back)
-        self.back_button.pack(pady=5)
-
-        self.load_categories()
-        self.dropdown_remove.bind("<Return>", lambda event: self.remove_category())
-
-    def add_category(self):
-        new_category = self.category_var.get().strip()
-        if not new_category:
-            messagebox.showwarning("Warning", "Category name cannot be empty.")
-            return
-
+    def initialize_database(self):
         conn = sqlite3.connect('Trackwise.db')
         cursor = conn.cursor()
-
-        try:
-            cursor.execute("INSERT INTO categories (name) VALUES (?)", (new_category,))
-            conn.commit()
-            messagebox.showinfo("Success", f"Category '{new_category}' added successfully!")
-            self.category_var.set("")
-            self.load_categories()
-        except sqlite3.IntegrityError:
-            messagebox.showwarning("Warning", f"Category '{new_category}' already exists.")
-        finally:
-            conn.close()
-
-    def remove_category(self):
-        category_to_remove = self.remove_var.get()
-        if not category_to_remove or category_to_remove not in self.dropdown_remove.cget("values"):
-            messagebox.showwarning("Warning", "Please select a valid category to remove.")
-            return
-
-        confirm = messagebox.askyesno("Confirm",
-                                      f"Are you sure you want to delete category '{category_to_remove}' and all related inventory items?")
-        if not confirm:
-            return
-
-        conn = sqlite3.connect('Trackwise.db')
-        cursor = conn.cursor()
-
-        try:
-            # Remove related inventory items first
-            cursor.execute("DELETE FROM inventory WHERE category = ?", (category_to_remove,))
-
-            # Then remove from categories table
-            cursor.execute("DELETE FROM categories WHERE name = ?", (category_to_remove,))
-
-            conn.commit()
-            messagebox.showinfo("Success",
-                                f"Category '{category_to_remove}' and all related items were removed successfully!")
-
-            self.remove_var.set("")
-            self.dropdown_remove.set("-- Select Category --")
-            self.load_categories()
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to remove category: {e}")
-        finally:
-            conn.close()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS inventory (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product_id TEXT,
+                item_name TEXT NOT NULL UNIQUE,
+                category TEXT NOT NULL,
+                quantity INTEGER NOT NULL,
+                price REAL NOT NULL,
+                status TEXT NOT NULL,
+                register_date TEXT NOT NULL
+            )
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS categories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL
+            )
+        ''')
+        conn.commit()
+        conn.close()
 
     def load_categories(self):
         conn = sqlite3.connect('Trackwise.db')
         cursor = conn.cursor()
-        cursor.execute("SELECT name FROM categories ORDER BY name")
-        categories = [row[0] for row in cursor.fetchall()]
+        cursor.execute("SELECT name FROM categories")
+        self.categories = [row[0] for row in cursor.fetchall()]
         conn.close()
 
-        self.dropdown_remove.configure(values=categories)
-        self.dropdown_remove.set("-- Select Category --")  # Placeholder-like display
+    def create_widgets(self):
+        self.item_text = ctk.CTkLabel(self.root, text="Item Name:", font=("Arial", 23), bg_color="#FFFFFF", fg_color="#FFFFFF", text_color="black")
+        self.item_text.place(x=210 / 1920 * self.width, y=215 / 974 * self.height)
+
+        self.item = ctk.StringVar()
+        self.item_entry = ctk.CTkEntry(self.root, font=("Arial", 18), width=395, height=45, textvariable=self.item)
+        self.item_entry.place(x=205 / 1920 * self.width, y=255 / 974 * self.height)
+
+        self.category_text = ctk.CTkLabel(self.root, text="Category:", font=("Arial", 23), bg_color="#FFFFFF", fg_color="#FFFFFF", text_color="black")
+        self.category_text.place(x=210 / 1920 * self.width, y=360 / 974 * self.height)
+
+        self.category = ctk.StringVar()
+        self.category_combobox = ctk.CTkComboBox(self.root, values=self.categories, variable=self.category, font=("Arial", 18), width=395, height=45)
+        self.category_combobox.place(x=205 / 1920 * self.width, y=400 / 974 * self.height)
+
+        self.add_category_link = ctk.CTkLabel(self.root, text="Add a new category", font=("Arial", 16, "underline"), text_color="blue", cursor="hand2")
+        self.add_category_link.place(x=205 / 1920 * self.width, y=470 / 974 * self.height)
+        self.add_category_link.bind("<Button-1>", self.open_add_category_window)
+
+        self.quantity_text = ctk.CTkLabel(self.root, text="Quantity:", font=("Arial", 23), bg_color="#FFFFFF", text_color="black")
+        self.quantity_text.place(x=210 / 1920 * self.width, y=524 / 974 * self.height)
+
+        self.quantity = ctk.StringVar()
+        self.quantity_entry = ctk.CTkEntry(self.root, font=("Arial", 18), width=395, height=45, textvariable=self.quantity)
+        self.quantity_entry.place(x=205 / 1920 * self.width, y=560 / 974 * self.height)
+
+        self.price_text = ctk.CTkLabel(self.root, text="Price:", font=("Arial", 23), bg_color="#FFFFFF", text_color="black")
+        self.price_text.place(x=937 / 1920 * self.width, y=209 / 974 * self.height)
+
+        self.price = ctk.StringVar()
+        self.price_entry = ctk.CTkEntry(self.root, font=("Arial", 18), width=395, height=45, textvariable=self.price)
+        self.price_entry.place(x=935 / 1920 * self.width, y=255 / 974 * self.height)
+
+        self.status_text = ctk.CTkLabel(self.root, text="Status:", font=("Arial", 23), bg_color="#FFFFFF", text_color="black")
+        self.status_text.place(x=937 / 1920 * self.width, y=360 / 974 * self.height)
+
+        self.status = ctk.StringVar()
+        self.status_entry = ctk.CTkEntry(self.root, font=("Arial", 18), width=395, height=45, textvariable=self.status)
+        self.status_entry.place(x=935 / 1920 * self.width, y=400 / 974 * self.height)
+
+        self.date_text = ctk.CTkLabel(self.root, text="Registration Date:", font=("Arial", 23), bg_color="#FFFFFF", text_color="black")
+        self.date_text.place(x=937 / 1920 * self.width, y=508 / 974 * self.height)
+
+        self.date = ctk.StringVar(value=datetime.now().strftime("%d-%m-%Y"))
+        self.date_entry = ctk.CTkEntry(self.root, font=("Arial", 18), width=395, height=45, textvariable=self.date, state="readonly")
+        self.date_entry.place(x=935 / 1920 * self.width, y=550 / 974 * self.height)
+
+        self.back_button = ctk.CTkButton(self.root, text="Back", fg_color="#2A50CB", text_color="#FFFCFC", width=159, height=44, font=("Inter", 20), command=self.go_back)
+        self.back_button.place(x=113 / 1920 * self.width, y=730 / 974 * self.height)
+
+        self.add_button = ctk.CTkButton(self.root, text="Add Product", fg_color="#2A50CB", text_color="#FFFCFC", width=159, height=44, font=("Inter", 20), command=self.add_item)
+        self.add_button.place(x=1526 / 1920 * self.width, y=730 / 974 * self.height)
+
+        self.qr_label = ctk.CTkLabel(self.root, text="QR Code will appear here", width=197, height=197)
+        self.qr_label.place(x=1499 / 1920 * self.width, y=280 / 974 * self.height)
+
+    def open_add_category_window(self, event=None):
+        try:
+            subprocess.Popen(["python", "AddCategory.py"])
+            self.root.destroy()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open Add Category window: {e}")
+
+    def add_item(self):
+        item_name = self.item.get().strip()
+        category = self.category.get().strip()
+        quantity = self.quantity.get().strip()
+        price = self.price.get().strip()
+        status = self.status.get().strip()
+        register_date = self.date.get()
+
+        if not item_name or not category or not quantity or not price or not status:
+            messagebox.showerror("Error", "All Fields are required")
+            return
+
+        try:
+            quantity = int(quantity)
+            price = float(price)
+        except ValueError:
+            messagebox.showerror("Error", "Quantity must be integer and Price must be a number.")
+            return
+
+        conn = sqlite3.connect('Trackwise.db')
+        cursor = conn.cursor()
+
+        # Check for duplicate item name
+        cursor.execute("SELECT * FROM inventory WHERE item_name = ?", (item_name,))
+        if cursor.fetchone():
+            messagebox.showerror("Error", f"Item '{item_name}' already exists in inventory.")
+            conn.close()
+            return
+
+        while True:
+            product_id = generate_unique_product_id()
+            cursor.execute("SELECT 1 FROM inventory WHERE product_id = ?", (product_id,))
+            if not cursor.fetchone():
+                break
+
+        cursor.execute("""
+            INSERT INTO inventory (product_id, item_name, category, quantity, price, status, register_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (product_id, item_name, category, quantity, price, status, register_date))
+        conn.commit()
+        conn.close()
+
+        local_ip = socket.gethostbyname(socket.gethostname())
+        qr_data = f"http://{local_ip}:5000/product/{product_id}"
+
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_H,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(str(qr_data))
+        qr.make(fit=True)
+
+        os.makedirs(QR_FOLDER, exist_ok=True)
+        qr_img_path = os.path.join(QR_FOLDER, f"{product_id}.png")
+        qr_img = qr.make_image(fill_color="black", back_color="white")
+        qr_img.save(qr_img_path)
+
+        qr_display_img = qr_img.resize((297, 297))
+        qr_tk_img = ImageTk.PhotoImage(qr_display_img)
+        self.qr_label.configure(image=qr_tk_img, text="")
+        self.qr_label.image = qr_tk_img
+
+        messagebox.showinfo("Success", f"Item added successfully!\nQR Code saved at {qr_img_path}")
 
     def go_back(self):
         try:
-            subprocess.Popen(["python", "Register_Product.py"])
+            subprocess.Popen(["python", "Admin_Dashboard.py"])
             self.root.destroy()
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to go back: {e}")
+            messagebox.showerror("Error", f"Failed to open Admin Dashboard: {e}")
 
 if __name__ == "__main__":
     ctk.set_appearance_mode("light")
     ctk.set_default_color_theme("blue")
     root = ctk.CTk()
-    app = AddCategoryWindow(root)
+    app = Manager_Login(root)
     root.mainloop()
