@@ -4,21 +4,20 @@ from tkcalendar import DateEntry
 from tkinter import ttk
 import matplotlib.pyplot as plt
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter, landscape, A4
+from reportlab.lib.pagesizes import A4
 from reportlab.platypus import  SimpleDocTemplate, Table , TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 import os
 import matplotlib.cm as cm
 from PIL import Image
-import subprocess
-import sys
 
-class SalesHistoryApp(ctk.CTk):
-    def __init__(self):
-        super().__init__()
-        self.title("View Sales History")
-        self.geometry("1920x974")
-        ctk.set_appearance_mode("light")
+class SalesHistoryPage(ctk.CTkFrame):
+    def __init__(self,parent,controller):
+        super().__init__(parent)
+        self.controller = controller
+
+        self.screen_width = 1920
+        self.screen_height = 974
 
         self.from_date_var = ctk.StringVar()
         self.to_date_var = ctk.StringVar()
@@ -34,7 +33,7 @@ class SalesHistoryApp(ctk.CTk):
     def fetch_categories(self):
         conn = sqlite3.connect("Trackwise.db")
         cursor = conn.cursor()
-        cursor.execute("SELECT DISTINCT category FROM sales")
+        cursor.execute("SELECT DISTINCT category FROM Sales")
         categories = [row[0]for row in cursor.fetchall()]
         conn.close()
         return["All"] + categories
@@ -66,10 +65,10 @@ class SalesHistoryApp(ctk.CTk):
         self.category_dropdown.place(x=10, y=200)
         self.category_dropdown.set("All")
 
-        ctk.CTkButton(self.left_frame, text="Filter", command=self.fetch_sales_data, width=238, height=35,fg_color="#2155CD").place(x=10, y=270)
-        ctk.CTkButton(self.left_frame, text="Print Report", command=self.generate_pdf_report, width=238, height=35,fg_color="#2155CD").place(x=10, y=340)
-        ctk.CTkButton(self.left_frame, text="Generate Sales Chart", command=self.generate_sales_chart, width=238,height=35,fg_color="#2155CD").place(x=10, y=410)
-        ctk.CTkButton(self.left_frame, text="Back To Dashboard", command=self.back_to_dashboard, width=238,height=35, fg_color="#2155CD").place(x=10, y=480)
+        ctk.CTkButton(self.left_frame, text="Filter", command=self.fetch_sales_data, width=238, height=35,fg_color="#2155CD",font=("Arial", 20)).place(x=10, y=270)
+        ctk.CTkButton(self.left_frame, text="Print Report", command=self.generate_pdf_report, width=238, height=35,fg_color="#2155CD",font=("Arial", 20)).place(x=10, y=340)
+        ctk.CTkButton(self.left_frame, text="Generate Sales Chart", command=self.generate_sales_chart, width=238,height=35,fg_color="#2155CD",font=("Arial", 20)).place(x=10, y=410)
+        ctk.CTkButton(self.left_frame, text="Back", command=self.back_to_dashboard, width=238,height=35, fg_color="#2155CD",font=("Arial", 20)).place(x=10, y=480)
 
         # Treeview in right frame
         columns = ("Date", "Item Name", "Category", "Quantity Sold", "Total Price (RM)")
@@ -89,8 +88,7 @@ class SalesHistoryApp(ctk.CTk):
         self.right_frame.place(x=300, y=self.frame.winfo_height() - self.right_frame.winfo_reqheight())
 
     def back_to_dashboard(self):
-        self.destroy()
-        subprocess.Popen([sys.executable, r"C:\Users\User\PycharmProjects\ALL 2\Manager dashboard.py"])
+        self.controller.show_frame("ManagerDashboard")
 
     def fetch_sales_data(self):
         conn = sqlite3.connect("Trackwise.db")
@@ -206,7 +204,3 @@ class SalesHistoryApp(ctk.CTk):
         ax.tick_params(axis='x',rotation=45)
         plt.tight_layout()
         plt.show()
-
-if __name__ == "__main__":
-    app = SalesHistoryApp()
-    app.mainloop()
