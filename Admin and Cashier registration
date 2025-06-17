@@ -2,22 +2,21 @@ import customtkinter as ctk
 from PIL import Image
 from tkinter import messagebox
 import sqlite3
-import subprocess
-import sys
-import hashlib
+import bcrypt
 import re
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-class Register(ctk.CTk):
-    def __init__(self):
-        super().__init__()
+class Register(ctk.CTkFrame):
+    def __init__(self,parent,controller):
+        super().__init__(parent)
+        self.controller = controller
+        self.screen_width = 1920
+        self.screen_height = 974
+        self.configure(fg_color="#FFFFFF", width=self.screen_width, height=self.screen_height)
 
         self.Trackwise_db()
-        self.title("Registration")
-        self.geometry("1920x974")
-        ctk.set_appearance_mode("light")
 
         try:
             logo_image = Image.open(r"C:\Users\User\Documents\Ruxin file\ALL 2\logo.png").resize((80, 80))
@@ -95,7 +94,7 @@ class Register(ctk.CTk):
         conn.close()
 
     def hash_password(self,password):
-        return hashlib.sha256(password.encode()).hexdigest()
+        return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
     def send_email(self, username, password, recipient_email):
         sender_email = "ruxinthean@gmail.com"  # Replace with your email
@@ -122,8 +121,7 @@ class Register(ctk.CTk):
             print(f"Error sending email: {e}")
 
     def back_to_dashboard(self):
-        self.destroy()
-        subprocess.Popen([sys.executable, r"C:\Users\User\PycharmProjects\ALL 2\Manager dashboard.py"])
+        self.controller.show_frame("ManagerDashboard")
 
     def register_user(self):
         username = self.username_entry.get().strip()
@@ -167,10 +165,4 @@ class Register(ctk.CTk):
         messagebox.showinfo("Success", "User registered successfully!")
         recipient_email = email
         self.send_email(username, password, recipient_email)
-        self.destroy()
-        subprocess.Popen([sys.executable, r"C:\Users\User\PycharmProjects\ALL 2\manager login.py"])
-
-
-if __name__ == "__main__":
-    app = Register()
-    app.mainloop()
+        self.controller.show_frame("ManagerDashboard")
