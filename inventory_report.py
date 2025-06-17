@@ -11,17 +11,15 @@ from reportlab.platypus import Paragraph, Spacer, HRFlowable
 from reportlab.lib.styles import ParagraphStyle
 import subprocess
 
-class InventoryDetails(ctk.CTk):
-    def __init__(self):
-        super().__init__()
-        self.title("View Inventory Details")
-        self.geometry("1920x974")
-        self.configure(fg_color="#FFFFFF")
-        self.resizable(True, True)
+class InventoryReport(ctk.CTkFrame):
+    def __init__(self,parent,controller):
+        super().__init__(parent)
+        self.controller = controller
+        self.width, self.height = 1574, 800
 
         # Load background image
-        self.original_bg_image = Image.open("inventory_report_bg.png")
-        self.bg_photo = CTkImage(light_image=self.original_bg_image, size=(1600, 800))
+        self.original_bg_image = Image.open(r"C:\Users\User\Documents\Ruxin file\ALL 2\View sales history.png")
+        self.bg_photo = CTkImage(light_image=self.original_bg_image, size=(self.width, self.height))
 
         self.bg_label = ctk.CTkLabel(self, text="", image=self.bg_photo)
         self.bg_label.place(x=0, y=0, relwidth=1, relheight=1)
@@ -269,15 +267,4 @@ class InventoryDetails(ctk.CTk):
         plt.show()
 
     def go_back(self):
-        try:
-            subprocess.Popen(["python", "manager_dash.py"])
-            self.destroy()
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to open Manager Dashboard: {e}")
-
-
-if __name__ == "__main__":
-    ctk.set_appearance_mode("light")
-    ctk.set_default_color_theme("blue")
-    app = InventoryDetails()
-    app.mainloop()
+        self.controller.show_frame("ManagerDashboard")
