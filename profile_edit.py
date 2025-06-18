@@ -1,33 +1,25 @@
 import customtkinter as ctk
 from PIL import Image
-from tkinter import filedialog, messagebox, font
+from tkinter import filedialog, messagebox
 import sqlite3
 import bcrypt
-import os, subprocess, sys, re
+import os, re
 from datetime import datetime
 from tkcalendar import DateEntry
+from profile import UserProfileApp
 
-class EditProfileApp:
-    def __init__(self, root, user_id):
-        self.root = root
+class EditProfileApp(ctk.CTkFrame):
+    def __init__(self, parent,controller, user_id):
+        super().__init__(parent)
+        self.controller = controller
         self.user_id = user_id
-        self.photo_path = None  # default, update later
-        self.setup_window()
+        self.photo_path = None
+        self.screen_width = self.winfo_screenwidth()
+        self.screen_height = self.winfo_screenheight()
+        self.configure(fg_color="#FFFFFF")
         self.create_main_frame()
         self.create_layout()
         self.populate_user_data()
-
-    def setup_window(self):
-        ctk.set_appearance_mode("light")
-        ctk.set_default_color_theme("blue")
-
-        self.screen_width = self.root.winfo_screenwidth()
-        self.screen_height = self.root.winfo_screenheight()
-
-        self.root.geometry(f"{self.screen_width}x{self.screen_height}")
-        self.root.title("Profile Edit")
-        self.root.configure(bg="#FFFFFF")
-        self.root.resizable(True, True)
 
     def create_main_frame(self):
         self.main_frame_width = int(self.screen_width * 0.92)
@@ -36,7 +28,7 @@ class EditProfileApp:
         main_frame_y = (self.screen_height - self.main_frame_height) // 2 - 35
 
         self.main_frame = ctk.CTkFrame(
-            master=self.root,
+            master=self,
             width=self.main_frame_width,
             height=self.main_frame_height,
             corner_radius=10,
@@ -105,12 +97,10 @@ class EditProfileApp:
 
     def add_image(self):
         try:
-            # Use the user's photo if set and the file exists
             if hasattr(self, "photo_path") and self.photo_path and os.path.exists(self.photo_path):
                 image_path = self.photo_path
             else:
-                # Fall back to default image
-                image_path = "profile_pic.png"
+                image_path = r"C:\Users\User\Documents\Ruxin file\ALL 2\profile_pic.png"
 
             img = ctk.CTkImage(Image.open(image_path), size=(200, 200))
             self.image_label = ctk.CTkLabel(self.main_frame, image=img, text="")
@@ -124,7 +114,7 @@ class EditProfileApp:
         conn = sqlite3.connect("Trackwise.db")
         cursor = conn.cursor()
 
-        cursor.execute("SELECT username, email, phone, dob, photo_path FROM users WHERE user_id = ?", (self.user_id,))
+        cursor.execute("SELECT username, email, phone, dob, photo_path FROM users WHERE id = ?", (self.user_id,))
         result = cursor.fetchone()
         conn.close()
 
@@ -176,7 +166,7 @@ class EditProfileApp:
         # Check if email is already taken by another user
         conn = sqlite3.connect("Trackwise.db")
         cursor = conn.cursor()
-        cursor.execute("SELECT user_id FROM users WHERE email = ?", (email,))
+        cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
         result = cursor.fetchone()
         conn.close()
 
@@ -239,7 +229,7 @@ class EditProfileApp:
         cursor = conn.cursor()
 
         # Get current data
-        cursor.execute("SELECT password, username, email, phone, dob, photo_path FROM users WHERE user_id = ?",
+        cursor.execute("SELECT password, username, email, phone, dob, photo_path FROM users WHERE id = ?",
                        (self.user_id,))
         result = cursor.fetchone()
 
@@ -257,7 +247,7 @@ class EditProfileApp:
                 conn.close()
                 return
 
-            if not bcrypt.checkpw(old_pw.encode(), current_hashed_pw):
+            if not bcrypt.checkpw(old_pw.encode(), current_hashed_pw.encode()):
                 messagebox.showerror("Error", "Old password is incorrect.")
                 conn.close()
                 return
@@ -284,28 +274,13 @@ class EditProfileApp:
         cursor.execute("""
             UPDATE users
             SET username = ?, email = ?, phone = ?, dob = ?, password = ?, photo_path = ?
-            WHERE user_id = ?
+            WHERE id = ?
         """, (username, email, phone, dob, new_hashed_pw, photo_path, self.user_id))
 
         conn.commit()
         conn.close()
         messagebox.showinfo("Success", "Profile updated successfully.")
-
-        # Reload profile page
-        for widget in self.root.winfo_children():
-            widget.destroy()
-        from profile import UserProfileApp
-        UserProfileApp(self.root, self.user_id)
+        self.controller.show_profile(self.user_id)
 
     def cancel_edit(self):
-        from profile import UserProfileApp
-        for widget in self.root.winfo_children():
-            widget.destroy()
-        UserProfileApp(self.root, self.user_id)
-
-
-if __name__ == "__main__":
-    user_id = 1  # Replace with the actual logged-in user's ID
-    window = ctk.CTk()
-    app = EditProfileApp(window, user_id)
-    window.mainloop()
+        self.controller.show_profile(self.user_id)
