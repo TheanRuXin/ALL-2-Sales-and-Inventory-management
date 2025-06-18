@@ -63,7 +63,7 @@ class AdminLoginPage(ctk.CTkFrame):
             messagebox.showerror("Error", "Invalid Username or Password")
 
     def forget_password(self):
-        ForgetPasswordPage(self)
+        ForgetPasswordPage(parent=self, controller=self.controller)
 
     def new_account(self):
         messagebox.showinfo("Help","Please contact your Manager")
