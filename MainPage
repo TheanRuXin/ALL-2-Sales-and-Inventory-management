@@ -14,7 +14,6 @@ from ViewSalesHistory import SalesHistoryPage
 from inventory_report import InventoryReport
 #from cashier_main import POSApp
 
-
 class InventoryApp(ctk.CTk):
     def __init__(self):
         super().__init__()
