@@ -3,7 +3,6 @@ from tkinter import messagebox, StringVar
 from PIL import Image
 import sqlite3
 import bcrypt
-
 from Forget_password import ForgetPasswordPage
 
 
@@ -65,7 +64,7 @@ class ManagerLoginPage(ctk.CTkFrame):
             messagebox.showerror("Error", "Invalid Username or Password")
 
     def forget_password(self):
-        ForgetPasswordPage(self)
+        ForgetPasswordPage(parent=self, controller=self.controller)
 
     def new_account(self):
         self.controller.show_frame("Manager_Register")
