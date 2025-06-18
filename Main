@@ -1,114 +1,39 @@
-import sys
-import pickle
 import customtkinter as ctk
-from PIL import Image
-import os
 
-# Page imports
-from dashboard_page import load_dashboard_content
-from user_page import UserPage
-from sales_report import load_sales_report_content
-from home_page import load_home_content
-from settings_page import load_settings_content
-from categories_pages import CategoriesPage
+from Manager_Register import Manager_Register
+from Manager_dashboard import ManagerDashboard
+from admin_dashboard import AdminDashboard
+from main_page import MainPage
+from manage_product_details import ManageProductPage
+from manager_login import ManagerLoginPage
+from cashier_login import CashierLogin
+from Admin_login import AdminLoginPage
+from Admin_and_Cashier_registration import Register
+from Register_Product import RegisterProductPage
+from ViewSalesHistory import SalesHistoryPage
+from inventory_report import InventoryReport
+#from cashier_main import POSApp
 
-
-ctk.set_appearance_mode("light")
-ctk.set_default_color_theme("blue")
-
-
-class POSApp(ctk.CTk):
-    def __init__(self, user_data):
+class InventoryApp(ctk.CTk):
+    def __init__(self):
         super().__init__()
+        self.title("Inventory Management System")
+        self.geometry("1574x800")
+        ctk.set_appearance_mode("light")
 
-        self.user_data = user_data  # full tuple from Trackwise.db
-        self.username = user_data[1]  # assuming second field is username
+        self.frames = {}
+        for F in (MainPage, ManagerLoginPage, CashierLogin, AdminDashboard, AdminLoginPage, ManagerDashboard,Manager_Register,Register,RegisterProductPage,ManageProductPage, SalesHistoryPage,InventoryReport):
+            page_name = F.__name__
+            frame = F(parent=self, controller=self)
+            self.frames[page_name] = frame
+            frame.place(x=0, y=0, relwidth=1, relheight=1)
 
-        self.title("Trackwise")
-        self.geometry("1290x700")
-        self.iconbitmap("images/favicon (3).ico")
-        self.nav_items = ["dashboard", "user", "sales", "home", "tag", "settings"]
-        self.icons = {}
-        self.buttons = {}
-        self.active_button = None
+        self.show_frame("MainPage")
 
-        self.create_sidebar()
-        self.create_content_area()
-        self.load_page("dashboard")
-
-    def create_sidebar(self):
-        sidebar = ctk.CTkFrame(self, width=150, fg_color="#cce7f9", corner_radius=0)
-        sidebar.pack(side="left", fill="y")
-
-        btn_container = ctk.CTkFrame(sidebar, fg_color="transparent")
-        btn_container.pack(expand=True)
-
-        for item in self.nav_items:
-            img_path = os.path.join("images", f"{item}.png")
-            if os.path.exists(img_path):
-                self.icons[item] = ctk.CTkImage(Image.open(img_path), size=(40, 40))
-            else:
-                self.icons[item] = None
-
-            btn = ctk.CTkButton(
-                btn_container,
-                image=self.icons[item],
-                text="",
-                width=50,
-                height=50,
-                fg_color="transparent",
-                hover=True,
-                command=lambda name=item: self.load_page(name)
-            )
-            btn.pack(pady=10)
-            self.buttons[item] = btn
-
-    def create_content_area(self):
-        self.content_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.content_frame.pack(side="right", expand=True, fill="both")
-
-    def clear_content(self):
-        for widget in self.content_frame.winfo_children():
-            widget.destroy()
-
-    def set_active_button(self, name):
-        for key, btn in self.buttons.items():
-            if key == name:
-                btn.configure(corner_radius=0, fg_color="#ffffff", width=61, height=60)
-            else:
-                btn.configure(corner_radius=0, fg_color="transparent", width=50, height=50)
-        self.active_button_name = name
-
-    def load_page(self, name):
-        self.clear_content()
-        self.set_active_button(name)
-
-        if name == "dashboard":
-            load_dashboard_content(self.content_frame, self.username)
-
-        elif name == "user":
-            UserPage(self.content_frame, username=self.username)
-        elif name == "sales":
-            load_sales_report_content(self.content_frame)
-
-        elif name == "home":
-            load_home_content(self.content_frame)
-        elif name == "tag":
-            CategoriesPage(self.content_frame)
-        elif name == "settings":
-            load_settings_content(self.content_frame)
-        else:
-            ctk.CTkLabel(self.content_frame, text=f"{name.capitalize()} Page Coming Soon...",
-                         font=("Arial", 20)).pack(pady=50)
-
+    def show_frame(self, page_name):
+        frame = self.frames[page_name]
+        frame.tkraise()
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("❌ No user data file passed.")
-        sys.exit(1)
-
-    with open(sys.argv[1], 'rb') as f:
-        user_data = pickle.load(f)
-
-    app = POSApp(user_data)
+    app = InventoryApp()
     app.mainloop()
