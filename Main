@@ -13,6 +13,7 @@ from Register_Product import RegisterProductPage
 from ViewSalesHistory import SalesHistoryPage
 from inventory_report import InventoryReport
 #from cashier_main import POSApp
+from profile import UserProfileApp
 
 class InventoryApp(ctk.CTk):
     def __init__(self):
@@ -20,6 +21,7 @@ class InventoryApp(ctk.CTk):
         self.title("Inventory Management System")
         self.geometry("1574x800")
         ctk.set_appearance_mode("light")
+        self.logged_in_user_id = None
 
         self.frames = {}
         for F in (MainPage, ManagerLoginPage, CashierLogin, AdminDashboard, AdminLoginPage, ManagerDashboard,Manager_Register,Register,RegisterProductPage,ManageProductPage, SalesHistoryPage,InventoryReport):
@@ -33,6 +35,14 @@ class InventoryApp(ctk.CTk):
     def show_frame(self, page_name):
         frame = self.frames[page_name]
         frame.tkraise()
+
+    def show_profile(self, user_id):
+        if "UserProfileApp" in self.frames:
+            self.frames["UserProfileApp"].destroy()
+        profile_frame = UserProfileApp(parent=self, controller=self, user_id=user_id)
+        self.frames["UserProfileApp"] = profile_frame
+        profile_frame.place(x=0, y=0, relwidth=1, relheight=1)
+        profile_frame.tkraise()
 
 if __name__ == "__main__":
     app = InventoryApp()
