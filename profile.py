@@ -2,7 +2,7 @@ import customtkinter as ctk
 from PIL import Image
 from customtkinter import CTkImage
 import sqlite3
-import os, sys, subprocess
+import os
 
 def initialize_database():
     conn = sqlite3.connect("Trackwise.db")
@@ -10,7 +10,7 @@ def initialize_database():
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
-        user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE NOT NULL,
         role TEXT,
         email TEXT,
@@ -22,13 +22,15 @@ def initialize_database():
     conn.commit()
     conn.close()
 
-class UserProfileApp:
-    def __init__(self, root, user_id):
-        self.root = root
+class UserProfileApp(ctk.CTkFrame):
+    def __init__(self, parent,controller, user_id):
+        super().__init__(parent)
+        self.controller = controller
         self.user_id = user_id
         self.user_data = self.get_user_data_from_db()
-
-        self.setup_window()
+        self.screen_width = self.winfo_screenwidth()
+        self.screen_height = self.winfo_screenheight()
+        self.configure(fg_color="#FFFFFF")
         self.create_main_frame()
         self.create_edit_button()
         self.load_profile_image()
@@ -42,7 +44,7 @@ class UserProfileApp:
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT username, role, email, phone, dob
-                FROM users WHERE user_id = ?
+                FROM users WHERE id = ?
             """, (self.user_id,))
             row = cursor.fetchone()
             conn.close()
@@ -60,18 +62,6 @@ class UserProfileApp:
             print(f"Database error: {e}")
             return None
 
-    def setup_window(self):
-        ctk.set_appearance_mode("light")
-        ctk.set_default_color_theme("blue")
-
-        self.screen_width = self.root.winfo_screenwidth()
-        self.screen_height = self.root.winfo_screenheight()
-
-        self.root.geometry(f"{self.screen_width}x{self.screen_height}")
-        self.root.title("User Profile")
-        self.root.configure(bg="#FFFFFF")
-        self.root.resizable(True, True)
-
     def create_main_frame(self):
         self.main_frame_width = int(self.screen_width * 0.92)
         self.main_frame_height = int(self.screen_height * 0.76)
@@ -79,7 +69,7 @@ class UserProfileApp:
         main_frame_y = (self.screen_height - self.main_frame_height) // 2 - 35
 
         self.main_frame = ctk.CTkFrame(
-            master=self.root,
+            master=self,
             width=self.main_frame_width,
             height=self.main_frame_height,
             corner_radius=10,
@@ -108,11 +98,11 @@ class UserProfileApp:
         try:
             conn = sqlite3.connect("Trackwise.db")
             cursor = conn.cursor()
-            cursor.execute("SELECT photo_path FROM users WHERE user_id = ?", (self.user_id,))
+            cursor.execute("SELECT photo_path FROM users WHERE id = ?", (self.user_id,))
             row = cursor.fetchone()
             conn.close()
 
-            image_path = row[0] if row and row[0] and os.path.exists(row[0]) else "profile_pic.png"
+            image_path = row[0] if row and row[0] and os.path.exists(row[0]) else r"C:\Users\User\Documents\Ruxin file\ALL 2\profile_pic.png"
 
             profile_img = Image.open(image_path)
             profile_img = profile_img.resize((200, 200))
@@ -204,15 +194,15 @@ class UserProfileApp:
         role = self.user_data["role"].lower() if self.user_data and self.user_data["role"] else ""
 
         if role == "admin":
-            subprocess.Popen([sys.executable, "admin_dashboard.py"])
+            self.controller.show_frame("AdminDashboard")
         elif role == "manager":
-            subprocess.Popen([sys.executable, "manager_dash.py"])
+            self.controller.show_frame("ManagerDashboard")
         elif role == "cashier":
-            subprocess.Popen([sys.executable, "cashier_dashboard.py"])
+            self.controller.show_frame("POSApp")
         else:
             print("Unknown role. Cannot route to dashboard.")
 
-        self.root.destroy()
+        self.destroy()
 
     def create_back_button(self):
         back_button = ctk.CTkButton(
@@ -227,15 +217,8 @@ class UserProfileApp:
 
     def load_edit_page(self):
         from profile_edit import EditProfileApp
-        # Clear all widgets from the current window
-        for widget in self.root.winfo_children():
+        for widget in self.winfo_children():
             widget.destroy()
-        EditProfileApp(self.root, self.user_id)
+        edit_frame = EditProfileApp(self, self.controller, self.user_id)
+        edit_frame.pack(fill="both", expand=True)
 
-
-if __name__ == "__main__":
-    initialize_database()
-
-    window = ctk.CTk()
-    app = UserProfileApp(window, user_id=1)  # You must ensure this user exists in the DB
-    window.mainloop()
