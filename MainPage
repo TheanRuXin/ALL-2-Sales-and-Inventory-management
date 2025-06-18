@@ -1,39 +1,29 @@
 import customtkinter as ctk
+from PIL import Image
 
-from Manager_Register import Manager_Register
-from Manager_dashboard import ManagerDashboard
-from admin_dashboard import AdminDashboard
-from main_page import MainPage
-from manage_product_details import ManageProductPage
-from manager_login import ManagerLoginPage
-from cashier_login import CashierLogin
-from Admin_login import AdminLoginPage
-from Admin_and_Cashier_registration import Register
-from Register_Product import RegisterProductPage
-from ViewSalesHistory import SalesHistoryPage
-from inventory_report import InventoryReport
-#from cashier_main import POSApp
+class MainPage(ctk.CTkFrame):
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+        self.controller = controller
 
-class InventoryApp(ctk.CTk):
-    def __init__(self):
-        super().__init__()
-        self.title("Inventory Management System")
-        self.geometry("1574x800")
-        ctk.set_appearance_mode("light")
+        self.width = 1574
+        self.height = 800
 
-        self.frames = {}
-        for F in (MainPage, ManagerLoginPage, CashierLogin, AdminDashboard, AdminLoginPage, ManagerDashboard,Manager_Register,Register,RegisterProductPage,ManageProductPage, SalesHistoryPage,InventoryReport):
-            page_name = F.__name__
-            frame = F(parent=self, controller=self)
-            self.frames[page_name] = frame
-            frame.place(x=0, y=0, relwidth=1, relheight=1)
+        background_image = ctk.CTkImage(Image.open(r"C:\Users\User\Documents\Ruxin file\ALL 2\main.png"), size=(self.width, self.height))
+        background_label = ctk.CTkLabel(self, image=background_image, text="")
+        background_label.place(x=0, y=0)
 
-        self.show_frame("MainPage")
+        bold_font = ctk.CTkFont(family="Arial", size=50, weight="bold")
 
-    def show_frame(self, page_name):
-        frame = self.frames[page_name]
-        frame.tkraise()
-
-if __name__ == "__main__":
-    app = InventoryApp()
-    app.mainloop()
+        ctk.CTkButton(self, text="Manager", font=bold_font, fg_color="#2A50CB",
+                      width=550, height=100, text_color="#FFFFFF",
+                      corner_radius=50, command=lambda: controller.show_frame("ManagerLoginPage")
+                      ).place(x=500, y=200)
+        ctk.CTkButton(self, text="Admin", font=bold_font, fg_color="#2A50CB",
+                      width=550, height=100, text_color="#FFFFFF",
+                      corner_radius=50, command=lambda: controller.show_frame("AdminLoginPage")
+                      ).place(x=500, y=350)
+        ctk.CTkButton(self, text="Cashier", font=bold_font, fg_color="#2A50CB",
+                      width=550, height=100, text_color="#FFFFFF",
+                      corner_radius=50, command=lambda: controller.show_frame("CashierLogin")
+                      ).place(x=500, y=500)
