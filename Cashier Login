@@ -37,17 +37,22 @@ class CashierLogin(ctk.CTkFrame):
 
         conn = sqlite3.connect("Trackwise.db")
         cursor = conn.cursor()
-        cursor.execute("SELECT password, role FROM users WHERE username = ?", (username,))
+        cursor.execute("SELECT id,password, role FROM users WHERE username = ?", (username,))
         user = cursor.fetchone()
         conn.close()
 
         if user:
-            stored_hashed_password, role = user
+            user_id,stored_hashed_password, role = user
 
             if bcrypt.checkpw(password.encode(), stored_hashed_password.encode()):
                 if role == "Cashier":
                     messagebox.showinfo("Login Successful", f"Welcome {role.capitalize()}!")
                     self.controller.show_frame("POSApp")
+                    self.controller.logged_in_user_id = user_id
+                    from profile import UserProfileApp
+                    profile_window = ctk.CTk()
+                    UserProfileApp(profile_window, user_id)
+                    profile_window.mainloop()
                 elif role == "Manager":
                     messagebox.showerror("Access Denied", "You cannot login here as Cashier!")
                     self.controller.show_frame("MainPage")
@@ -95,11 +100,6 @@ class CashierLogin(ctk.CTkFrame):
                                      border_color="#1572D3", width=160, height=44, font=("Inter", 18), command=self.login)
         login_button.place(x=273 / 1920 * self.width, y=645 / 974 * self.height)
 
-        back_button = ctk.CTkButton(self, text="Back", bg_color="#D9D9D9", fg_color="Blue", text_color="white",
-                                     border_color="#1572D3", width=160, height=44, font=("Inter", 18),
-                                     command=self.back)
-        back_button.place(x=273 / 1920 * self.width, y=780 / 974 * self.height)
-
         account_label = ctk.CTkLabel(self, text="Don't have an account?",
                                      font=("Inter", 15),
                                      bg_color="#D9D9D9", fg_color="#D9D9D9",
@@ -110,11 +110,11 @@ class CashierLogin(ctk.CTkFrame):
         new_label.place(x=266 / 1920 * self.width, y=740 / 974 * self.height)
         new_label.bind("<Button-1>", lambda e: self.new_account())
 
-        cashier_button = ctk.CTkButton(self, text="Help!", bg_color="#D9D9D9", fg_color="Blue",
+        back_button = ctk.CTkButton(self, text="Back", bg_color="#D9D9D9", fg_color="Blue",
                                        text_color="white",
                                        border_color="#1572D3", width=129, height=35,
-                                       font=("Iter", 14))
-        cashier_button.place(x=866 / 1920 * self.width, y=800 / 974 * self.height)
+                                       font=("Iter", 14),command=self.back)
+        back_button.place(x=866 / 1920 * self.width, y=800 / 974 * self.height)
 
         # Trackwise
         admin_button = ctk.CTkButton(self, text="Trackwise", bg_color="#D9D9D9", fg_color="Blue",
