@@ -5,14 +5,14 @@ import sqlite3
 import bcrypt
 from Forget_password import ForgetPasswordPage
 
-class ManagerLoginPage(ctk.CTkFrame):
+class LoginPage(ctk.CTkFrame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
         self.width, self.height = 1574, 800
-        self.allowed_roles = ["Manager"]
+        self.allowed_roles = ["Manager","Admin","Cashier"]
 
-        background_image = ctk.CTkImage(Image.open(r"C:\Users\User\Documents\Ruxin file\ALL 2\logini manager.png"), size=(self.width, self.height))
+        background_image = ctk.CTkImage(Image.open(r"C:\Users\User\Documents\Ruxin file\ALL 2\Group 2.png"), size=(self.width, self.height))
         background_label = ctk.CTkLabel(self, image=background_image, text="")
         background_label.place(x=0, y=0)
 
@@ -28,6 +28,9 @@ class ManagerLoginPage(ctk.CTkFrame):
             role TEXT NOT NULL,
             email TEXT, phone TEXT, dob TEXT,
             password TEXT NOT NULL, photo_path TEXT)''')
+        password = "trackwise123"  # You can change this
+        hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
         conn.commit()
         conn.close()
 
@@ -46,20 +49,17 @@ class ManagerLoginPage(ctk.CTkFrame):
 
             if bcrypt.checkpw(password.encode(), stored_hashed_password.encode()):
                 if role == "Admin":
-                    messagebox.showerror("Access Denied", "You cannot login here as Admin!")
-                    self.controller.show_frame("MainPage")
+                    messagebox.showinfo("Login Successful", f"Welcome {role.capitalize()}!")
+                    self.controller.logged_in_user_id = user_id
+                    self.controller.show_frame("AdminDashboard")
                 elif role == "Manager":
                     messagebox.showinfo("Login Successful", f"Welcome {role.capitalize()}!")
-                    self.controller.show_frame("ManagerDashboard")
                     self.controller.logged_in_user_id = user_id
-
-                    from profile import UserProfileApp
-                    profile_window = ctk.CTk()
-                    UserProfileApp(profile_window, user_id)
-                    profile_window.mainloop()
+                    self.controller.show_frame("ManagerDashboard")
                 elif role == "Cashier":
-                    messagebox.showerror("Access Denied", "You cannot login here as Cashier!")
-                    self.controller.show_frame("MainPage")
+                    messagebox.showinfo("Login Successful", f"Welcome {role.capitalize()}!")
+                    self.controller.logged_in_user_id = user_id
+                    self.controller.show_frame("CashierDashboard")
                 else:
                     messagebox.showerror("Error", "Unknown role. Please contact Manager.")
             else:
@@ -71,10 +71,10 @@ class ManagerLoginPage(ctk.CTkFrame):
         ForgetPasswordPage(parent=self, controller=self.controller)
 
     def new_account(self):
-        self.controller.show_frame("Manager_Register")
+        messagebox.showinfo("Help","Please contact your Manager")
 
     def back(self):
-        self.controller.show_frame("MainPage")
+        self.controller.show_frame("LoginPage")
 
     def setup_ui(self):
         username_label = ctk.CTkLabel(self, text="Username:", font=("Inter", 22), bg_color="#D9D9D9", text_color="Black")
@@ -117,7 +117,6 @@ class ManagerLoginPage(ctk.CTkFrame):
                                        font=("Iter", 14),command=self.back)
         back_button.place(x=866 / 1920 * self.width, y=800 / 974 * self.height)
 
-        # Trackwise
         admin_button = ctk.CTkButton(self, text="Trackwise", bg_color="#D9D9D9", fg_color="Blue",
                                      text_color="white",
                                      border_color="#1572D3", width=129, height=35,
