@@ -1,5 +1,7 @@
 import customtkinter as ctk
 from PIL import Image
+from tkinter import messagebox
+from profile import UserProfileApp
 
 class AdminDashboard(ctk.CTkFrame):
     def __init__(self, parent, controller):
@@ -46,9 +48,10 @@ class AdminDashboard(ctk.CTkFrame):
         button_font = ("Arial", 30)
 
         button_info = [
-            ("Register Product", 50, self.register_product),
+            ("Register New Product", 50, self.register_product),
             ("Manage Product Details", 200, self.manage_product_details),
-            ("Log Out", 350, self.logout)
+            ("Profile", 350, self.open_profile),
+            ("Log Out", 500, self.logout)
         ]
 
         for text, y_pos, command in button_info:
@@ -70,5 +73,17 @@ class AdminDashboard(ctk.CTkFrame):
     def manage_product_details(self):
         self.controller.show_frame("ManageProductPage")
 
+    def open_profile(self):
+        user_id = self.controller.logged_in_user_id
+        if user_id:
+            if "UserProfileApp" not in self.controller.frames:
+                self.controller.frames["UserProfileApp"] = UserProfileApp(
+                    parent=self.controller, controller=self.controller, user_id=user_id
+                )
+                self.controller.frames["UserProfileApp"].place(relx=0, rely=0, relwidth=1, relheight=1)
+            self.controller.frames["UserProfileApp"].tkraise()
+        else:
+            messagebox.showerror("Error", "User ID not found. Please log in again.")
+
     def logout(self):
-        self.controller.show_frame("AdminLoginPage")
+        self.controller.show_frame("LoginPage")
