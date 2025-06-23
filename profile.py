@@ -15,7 +15,8 @@ def initialize_database():
         role TEXT,
         email TEXT,
         phone TEXT,
-        dob TEXT
+        dob TEXT,
+        photo_path TEXT
     )
     """)
 
