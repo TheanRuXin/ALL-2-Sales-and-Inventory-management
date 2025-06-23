@@ -56,7 +56,7 @@ class Register(ctk.CTkFrame):
 
         ctk.CTkLabel(left_frame, text="Select User Type:", font=("Arial", 24)).pack(pady=(10,5), anchor="w")
         self.role_var = ctk.StringVar(value="Select User Type")
-        self.role_dropdown = ctk.CTkComboBox(left_frame, values=["Admin", "Cashier"], variable=self.role_var, width=350,height=35)
+        self.role_dropdown = ctk.CTkComboBox(left_frame, values=["Admin", "Cashier","Manager"], variable=self.role_var, width=350,height=35)
         self.role_dropdown.pack(pady=(0, 30))
 
         # Right side: Password and Confirm Password
@@ -123,6 +123,14 @@ class Register(ctk.CTkFrame):
     def back_to_dashboard(self):
         self.controller.show_frame("ManagerDashboard")
 
+    def validate_email(self, email):
+        # Regular expression for validating email
+        email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_regex, email):
+            messagebox.showerror("Error", "Invalid email format.")
+            return False
+        return True
+
     def register_user(self):
         username = self.username_entry.get().strip()
         password = self.password_entry.get().strip()
@@ -146,6 +154,8 @@ class Register(ctk.CTkFrame):
         if len(password) < 8 or not re.search(r'\d', password) or not re.search(r'[A-Z]', password):
             messagebox.showerror("Error",
                                  "Password must be at least 8 characters long, with one number and one uppercase letter.")
+            return
+        if email and not self.validate_email(email):
             return
 
         conn = sqlite3.connect('Trackwise.db')
