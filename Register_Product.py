@@ -2,17 +2,18 @@ import os
 import sqlite3
 import qrcode
 import customtkinter as ctk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 from PIL import Image, ImageTk
 from datetime import datetime
 import subprocess
 
+
 QR_FOLDER ="qrcodes"
 
-class Manager_Login:
+class Register_Product:
     def __init__(self,root):
         self.root = root
-        self.root.title("Inventory Management System")
+        self.root.title("Register New Product")
         self.root.geometry("1920x974")
 
         self.width = self.root.winfo_screenwidth()
@@ -36,7 +37,8 @@ class Manager_Login:
             quantity INTEGER NOT NULL,
             price REAL NOT NULL,
             status TEXT NOT NULL,
-            register_date TEXT NOT NULL
+            register_date TEXT NOT NULL,
+            product_image BLOB
             )
         ''')
         conn.commit()
@@ -66,14 +68,15 @@ class Manager_Login:
         self.category_text.place(x=210 / 1920 * self.width, y=360 / 974 * self.height)
 
         self.category = ctk.StringVar()
-        self.category_entry = ctk.CTkEntry(self.root, font=("Arial",18), width=395 / 1536 * self.width,
+        self.category_entry = ctk.CTkComboBox(self.root, values=[""],
+                                   font=("Arial",18), width=395 / 1536 * self.width,
                                    height=45 / 864 * self.height, bg_color="#FFFFFF",
                                    fg_color="#D9D9D9", border_color="#FFFFFF", text_color="black",
-                                   textvariable=self.category)
+                                   )
         self.category_entry.place(x=205 / 1920 * self.width, y=400 / 974 * self.height)
 
 
-        #Quantiti
+        #Quantity
         self.quantity_text = ctk.CTkLabel(self.root, text="Quantity:",
                                     font=("Arial",23),
                                     bg_color="#FFFFFF", fg_color="#FFFFFF",
@@ -110,10 +113,11 @@ class Manager_Login:
         self.status_text.place(x=937 / 1920 * self.width, y=360 / 974 * self.height)
 
         self.status = ctk.StringVar()
-        self.status_entry = ctk.CTkEntry(self.root, font=("Arial", 18), width=395 / 1536 * self.width,
+        self.status_entry = ctk.CTkComboBox(self.root, values=["In Stock", "Out of Stock", "Unavailable"],
+                                            font=("Arial", 18), width=395 / 1536 * self.width,
                                            height=45 / 864 * self.height, bg_color="#FFFFFF",
                                            fg_color="#D9D9D9", border_color="#FFFFFF", text_color="black",
-                                           textvariable=self.status)
+                                           )
         self.status_entry.place(x=935 / 1920 * self.width, y=400 / 974 * self.height)
 
         #Registration Date
@@ -145,9 +149,24 @@ class Manager_Login:
         self.add_button.place(x=1526 / 1920 * root.winfo_screenwidth(), y=730 / 974 * root.winfo_screenheight())
 
         #OR CODES
-        self.qr_label = ctk.CTkLabel(self.root, text="QR Code will appear here", bg_color="#FFFFFF", fg_color="#2A50CB",
+        self.qr_label = ctk.CTkLabel(self.root, text="QR Code will appear here", bg_color="#FFFFFF",
+                                     fg_color="#2A50CB",
                                      width=197, height=197)
         self.qr_label.place(x=1499 / 1920 * self.width, y=280 / 974 * self.height)
+
+        # Product image placeholder
+        self.product_image_preview = ctk.CTkLabel(self.root, text="Product Image", bg_color="#FFFFFF",
+                                                  fg_color="#2A50CB",
+                                                  width=197, height=197)
+        self.product_image_preview.place(x=1499 / 1920 * self.width, y=280 / 974 * self.height)
+
+        #Upload Image
+        self.product_image_path = None
+
+        self.upload_btn = ctk.CTkButton(self.root, text="Upload Product Image",
+                                        command=self.upload_product_image, bg_color="#FFFFFF",
+                                        fg_color="#2A50CB", text_color="white", width=200)
+        self.upload_btn.place(x=1499 / 1920 * self.width, y=200 / 974 * self.height)
 
     def add_item(self):
         item_name = self.item_entry.get().strip()
@@ -157,8 +176,17 @@ class Manager_Login:
         status = self.status_entry.get().strip()
         register_date = self.date_entry.get()
 
+        image_data = None
+        if self.product_image_path:
+            with open(self.product_image_path, 'rb') as f:
+                image_data = f.read()
+
         if not item_name or not category or not quantity or not price or not status:
             messagebox.showerror("Error", "All Fields are required")
+            return
+
+        if not self.product_image_path:
+            messagebox.showerror("Error", "Please upload a product image before adding the item.")
             return
 
         try:
@@ -171,28 +199,41 @@ class Manager_Login:
         conn = sqlite3.connect('Trackwise.db')
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO inventory (item_name, category, quantity, price, status, register_date)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """, (item_name, category, quantity, price, status, register_date))
+            INSERT INTO inventory (item_name, category, quantity, price, status, register_date, product_image)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (item_name, category, quantity, price, status, register_date, image_data))
         conn.commit()
         item_id = cursor.lastrowid
         conn.close()
 
-        qr_data = (f"Item ID: {item_id}\n Name: {item_name}\n Category: {category}\n "
-                   f"Quantity: {quantity}\n Price: RM{price}\n Status:{status}\n Register Date: {register_date}")
+        qr_data = (f"Item ID: {item_id}\n"
+                   f"Name: {item_name}\n"
+                   f"Category: {category}\n"
+                   f"Quantity: {quantity}\n"
+                   f"Price: RM{price}\n"
+                   f"Status:{status}\n"
+                   f"Register Date: {register_date}")
 
         os.makedirs(QR_FOLDER, exist_ok=True)
         qr_img_path = os.path.join(QR_FOLDER, f"item_{item_id}.png")
         qr_code = qrcode.make(qr_data)
         qr_code.save(qr_img_path)
 
-        qr_display_img = Image.open(qr_img_path).resize((297, 297))
-        qr_tk_img = ImageTk.PhotoImage(qr_display_img)
+        qr_display_img = Image.open(qr_img_path)
+        qr_tk_img = ctk.CTkImage(light_image=qr_display_img, size=(197, 197))
         self.qr_label.configure(image=qr_tk_img, text="")
         self.qr_label.image = qr_tk_img
 
+        self.show_qr_popup(qr_img_path)
+
         messagebox.showinfo("Success", f"Item added successfully!\n"
                                        f"QR Code saved at {qr_img_path}")
+
+        self.item.set("")
+        self.category.set("")
+        self.quantity.set("")
+        self.price.set("")
+        self.status.set("")
 
     def go_back(self):
         try:
@@ -201,7 +242,38 @@ class Manager_Login:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to open Admin Dashboard: {e}")
 
+    def show_qr_popup(self, qr_img_path):
+        popup = ctk.CTkToplevel(self.root)
+        popup.title("QR Code Generated")
+        popup.geometry("360x420")
+
+        label = ctk.CTkLabel(popup, text="Item added successfully!\nHere is the QR code:",
+                             font=("Arial", 16), text_color="black")
+        label.pack(pady=10)
+
+        # Load and scale image using CTkImage
+        img = Image.open(qr_img_path)
+        ctk_img = ctk.CTkImage(light_image=img, size=(300, 300))
+
+        qr_label = ctk.CTkLabel(popup, image=ctk_img, text="")
+        qr_label.image = ctk_img  # prevent garbage collection
+        qr_label.pack(pady=10)
+
+        # Optional Close Button
+        close_btn = ctk.CTkButton(popup, text="Close", command=popup.destroy,
+                                  fg_color="#2A50CB", text_color="white", width=100)
+        close_btn.pack(pady=10)
+
+    def upload_product_image(self):
+        file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.png;*.jpg;*.jpeg")])
+        if file_path:
+            self.product_image_path = file_path
+            img = Image.open(file_path)
+            ctk_img = ctk.CTkImage(light_image=img, size=(197, 197))  # scale small
+            self.product_image_preview.configure(image=ctk_img, text="")
+            self.product_image_preview.image = ctk_img
+
 
 root = ctk.CTk()
-app = Manager_Login(root)
+app = Register_Product(root)
 root.mainloop()
