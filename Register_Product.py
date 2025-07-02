@@ -6,6 +6,10 @@ from tkinter import messagebox, filedialog
 from PIL import Image, ImageTk
 from datetime import datetime
 import subprocess
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import mm
+import platform
+
 
 
 QR_FOLDER ="qrcodes"
@@ -170,6 +174,13 @@ class Register_Product:
 
     def add_item(self):
         item_name = self.item_entry.get().strip()
+        item_name = item_name.lower().title()
+
+        # Reject if item name has no letters
+        if not any(char.isalpha() for char in item_name):
+            messagebox.showerror("Invalid Name", "Item Name Should Not Only Contain Numbers.")
+            return
+
         category = self.category_entry.get().strip()
         quantity = self.quantity_entry.get().strip()
         price = self.price_entry.get().strip()
@@ -189,15 +200,33 @@ class Register_Product:
             messagebox.showerror("Error", "Please upload a product image before adding the item.")
             return
 
+        # Validate quantity
         try:
             quantity = int(quantity)
+        except ValueError:
+            messagebox.showerror("Invalid Quantity", "Quantity must be a whole number.\n"
+                                                     "Example: 5 or 120")
+            return
+
+        # Validate price
+        try:
             price = float(price)
         except ValueError:
-            messagebox.showerror("Error", "Quantitiy must be integer and Price must be a number.")
+            messagebox.showerror("Invalid Price", "Price must be a valid number.\n"
+                                                  "Example: 0.09 or 250.00")
             return
 
         conn = sqlite3.connect('Trackwise.db')
         cursor = conn.cursor()
+
+        cursor.execute("SELECT item_name FROM inventory WHERE LOWER(item_name) = LOWER(?)", (item_name,))
+        existing_item = cursor.fetchone()
+
+        if existing_item:
+            conn.close()
+            messagebox.showerror("Duplicate Product", f"'{item_name}' Already Exists.")
+            return
+
         cursor.execute("""
             INSERT INTO inventory (item_name, category, quantity, price, status, register_date, product_image)
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -209,9 +238,7 @@ class Register_Product:
         qr_data = (f"Item ID: {item_id}\n"
                    f"Name: {item_name}\n"
                    f"Category: {category}\n"
-                   f"Quantity: {quantity}\n"
-                   f"Price: RM{price}\n"
-                   f"Status:{status}\n"
+                   f"Original Price: RM{price}\n"
                    f"Register Date: {register_date}")
 
         os.makedirs(QR_FOLDER, exist_ok=True)
@@ -224,10 +251,10 @@ class Register_Product:
         self.qr_label.configure(image=qr_tk_img, text="")
         self.qr_label.image = qr_tk_img
 
-        self.show_qr_popup(qr_img_path)
-
         messagebox.showinfo("Success", f"Item added successfully!\n"
                                        f"QR Code saved at {qr_img_path}")
+
+        self.show_qr_popup(qr_img_path, item_id)
 
         self.item.set("")
         self.category.set("")
@@ -242,13 +269,13 @@ class Register_Product:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to open Admin Dashboard: {e}")
 
-    def show_qr_popup(self, qr_img_path):
+    def show_qr_popup(self, qr_img_path, item_id):
         popup = ctk.CTkToplevel(self.root)
         popup.title("QR Code Generated")
-        popup.geometry("360x420")
+        popup.geometry("360x520")
 
         label = ctk.CTkLabel(popup, text="Item added successfully!\nHere is the QR code:",
-                             font=("Arial", 16), text_color="black")
+                             font=("Arial", 16), text_color="white")
         label.pack(pady=10)
 
         # Load and scale image using CTkImage
@@ -259,10 +286,16 @@ class Register_Product:
         qr_label.image = ctk_img  # prevent garbage collection
         qr_label.pack(pady=10)
 
-        # Optional Close Button
+        #Generate PDF
+        generate_pdf_btn = ctk.CTkButton(popup, text="Generate PDF",
+                                         command=lambda: self.save_qr_as_pdf(qr_img_path, item_id, self.item.get()),
+                                         fg_color="#2A50CB", text_color="white", width=120)
+        generate_pdf_btn.pack(pady=8)
+
+        # Close Button
         close_btn = ctk.CTkButton(popup, text="Close", command=popup.destroy,
                                   fg_color="#2A50CB", text_color="white", width=100)
-        close_btn.pack(pady=10)
+        close_btn.pack(pady=13)
 
     def upload_product_image(self):
         file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.png;*.jpg;*.jpeg")])
@@ -272,6 +305,38 @@ class Register_Product:
             ctk_img = ctk.CTkImage(light_image=img, size=(197, 197))  # scale small
             self.product_image_preview.configure(image=ctk_img, text="")
             self.product_image_preview.image = ctk_img
+
+    def save_qr_as_pdf(self, qr_img_path, item_id, product_name):
+        width, height = 60 * mm, 60 * mm
+        pdf_path = os.path.join(QR_FOLDER, f"item_{item_id}.pdf")
+
+        c = canvas.Canvas(pdf_path, pagesize=(width, height))
+
+        # Draw product name as heading
+        c.setFont("Helvetica-Bold", 12)
+        text_width = c.stringWidth(product_name, "Helvetica-Bold", 12)
+        c.drawString((width - text_width) / 2, height - 20, product_name)
+
+        # Draw QR code centered below heading
+        qr_size = 40 * mm
+        qr_x = (width - qr_size) / 2
+        qr_y = (height - 20 - qr_size - 10)
+        c.drawImage(qr_img_path, qr_x, qr_y, width=qr_size, height=qr_size)
+
+        c.save()
+
+        messagebox.showinfo("PDF Saved", f"QR Code PDF saved to:\n{pdf_path}")
+
+        # Automatically open the PDF
+        try:
+            if platform.system() == "Windows":
+                os.startfile(pdf_path)
+            elif platform.system() == "Users":
+                subprocess.call(['open', pdf_path])
+            else:
+                subprocess.call(['xdg-open', pdf_path])
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open PDF:\n{e}")
 
 
 root = ctk.CTk()
