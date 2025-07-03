@@ -143,10 +143,11 @@ class Manage_Product:
         self.status_text.place(x=1386 / 1920 * self.width, y=560 / 974 * self.height)
 
         self.status = ctk.StringVar()
-        self.status_entry = ctk.CTkEntry(self.root, font=("Inter", 18), width=320 / 1536 * self.width,
+        self.status_entry = ctk.CTkComboBox(self.root, values=["In Stock", "Out of Stock", "Unavailable"],
+                                            font=("Arial", 18), width=320 / 1536 * self.width,
                                            height=45 / 864 * self.height, bg_color="#FFFFFF",
                                            fg_color="#D9D9D9", border_color="#FFFFFF", text_color="black",
-                                           textvariable=self.status)
+                                           )
         self.status_entry.place(x=1386 / 1920 * self.width, y=600 / 974 * self.height)
 
         # Registration Date
@@ -276,12 +277,6 @@ class Manage_Product:
         for row in self.db.view_items():
             item_id, item_name, category, quantity, price, status, register_date, image_data = row
 
-            #Update Status based on the quantity
-            if quantity < 5:
-                status = "Low Stock"
-            else:
-                status = "In Stock"
-
             # Save updated status in the database
             self.db.update_item(item_id, item_name, category, quantity, price, status, register_date)
 
@@ -295,8 +290,14 @@ class Manage_Product:
         if selected_item:
             values = self.product_treeview.item(selected_item, "values")
             for i, key in enumerate(self.entries.keys()):
-                self.entries[key].delete(0, END)
-                self.entries[key].insert(0, values[i + 1])
+                widget = self.entries[key]
+                value = values[i + 1]
+
+                if hasattr(widget, "delete"):  # for CTkEntry
+                    widget.delete(0, END)
+                    widget.insert(0, value)
+                else:  # for CTkComboBox or others
+                    widget.set(value)
 
             self.generate_qr_code(values)
 
@@ -377,6 +378,7 @@ class Manage_Product:
         new_category = self.entries["Category"].get()
         new_quantity = self.entries["Quantity"].get()
         new_price = self.entries["Price"].get()
+        new_status = self.entries["Status"].get()
         new_date = self.entries["Register_Date"].get()
 
         try:
@@ -386,7 +388,7 @@ class Manage_Product:
             messagebox.showerror("Error", "Quantity must be an integer and Price must be a number.")
             return
 
-        new_status = "Low Stock" if new_quantity_int < 5 else "In Stock"
+        new_status = self.entries["Status"].get()
 
         # Original values from treeview (as strings)
         original_values = {
@@ -408,7 +410,7 @@ class Manage_Product:
         }
 
         # Check if anything has changed
-        if all(str(original_values[key]) == str(updated_values[key]) for key in original_values):
+        if all(str(original_values[key]).strip().lower() == str(updated_values[key]).strip().lower() for key in original_values):
             messagebox.showinfo("No Changes", "No changes were made to the item.")
             return
 
@@ -442,9 +444,13 @@ class Manage_Product:
 
     def clear_fields(self):
         for entry in self.entries.values():
-            entry.delete(0, END)
+            if hasattr(entry, "delete"):  # For CTkEntry
+                entry.delete(0, END)
+            else:  # For CTkComboBox
+                entry.set("")  # or a default value like entry.set("In Stock")
 
-        self.product_image_label.image_ref = None
+        self.product_image_label.configure(image=None, text="Product Image Here", fg_color="#2A50CB")
+        self.qr_label.configure(image=None, text="QR Code will Appear Here", fg_color="#2A50CB")
         self.product_treeview.selection_remove(self.product_treeview.selection())
 
     def delete_item_handler(self):
