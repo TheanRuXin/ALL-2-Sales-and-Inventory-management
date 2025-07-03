@@ -1,0 +1,344 @@
+import os
+import sqlite3
+import qrcode
+import customtkinter as ctk
+from tkinter import messagebox, filedialog
+from PIL import Image, ImageTk
+from datetime import datetime
+import subprocess
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import mm
+import platform
+
+
+
+QR_FOLDER ="qrcodes"
+
+class Register_Product:
+    def __init__(self,root):
+        self.root = root
+        self.root.title("Register New Product")
+        self.root.geometry("1920x974")
+
+        self.width = self.root.winfo_screenwidth()
+        self.height = self.root.winfo_screenheight()
+
+        background_image = ctk.CTkImage(Image.open("assets/Register_Product.png"), size=(self.width, self.height - 71))
+        background_image_label = ctk.CTkLabel(self.root, image=background_image, text="")
+        background_image_label.place(relx=0, rely=0)
+
+        self.create_widgets()
+        self.initialize_database()
+
+    def initialize_database(self):
+        conn = sqlite3.connect('Trackwise.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS inventory (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_name TEXT NOT NULL,
+            category TEXT NOT NULL,
+            quantity INTEGER NOT NULL,
+            price REAL NOT NULL,
+            status TEXT NOT NULL,
+            register_date TEXT NOT NULL,
+            product_image BLOB
+            )
+        ''')
+        conn.commit()
+        conn.close()
+
+    def create_widgets(self):
+        #Left Side
+        #Item Name
+        self.item_text = ctk.CTkLabel(self.root, text="Item Name:",
+                                    font=("Arial",23),
+                                    bg_color="#FFFFFF", fg_color="#FFFFFF",
+                                    text_color="black")
+        self.item_text.place(x=210 / 1920 * self.width, y=215 / 974 * self.height)
+
+        self.item = ctk.StringVar()
+        self.item_entry = ctk.CTkEntry(self.root, font=("Arial",18), width=395 / 1536 * self.width,
+                                   height=45 / 864 * self.height, bg_color="#FFFFFF",
+                                   fg_color="#D9D9D9", border_color="#FFFFFF", text_color="black",
+                                   textvariable=self.item)
+        self.item_entry.place(x=205 / 1920 * self.width, y=255 / 974 * self.height)
+
+        #Category
+        self.category_text = ctk.CTkLabel(self.root, text="Category:",
+                                    font=("Arial",23),
+                                    bg_color="#FFFFFF", fg_color="#FFFFFF",
+                                    text_color="black")
+        self.category_text.place(x=210 / 1920 * self.width, y=360 / 974 * self.height)
+
+        self.category = ctk.StringVar()
+        self.category_entry = ctk.CTkComboBox(self.root, values=[""],
+                                   font=("Arial",18), width=395 / 1536 * self.width,
+                                   height=45 / 864 * self.height, bg_color="#FFFFFF",
+                                   fg_color="#D9D9D9", border_color="#FFFFFF", text_color="black",
+                                   )
+        self.category_entry.place(x=205 / 1920 * self.width, y=400 / 974 * self.height)
+
+
+        #Quantity
+        self.quantity_text = ctk.CTkLabel(self.root, text="Quantity:",
+                                    font=("Arial",23),
+                                    bg_color="#FFFFFF", fg_color="#FFFFFF",
+                                    text_color="black")
+        self.quantity_text.place(x=210 / 1920 * self.width, y=508 / 974 * self.height)
+
+        self.quantity = ctk.StringVar()
+        self.quantity_entry = ctk.CTkEntry(self.root, font=("Arial",18), width=395 / 1536 * self.width,
+                                   height=45 / 864 * self.height, bg_color="#FFFFFF",
+                                   fg_color="#D9D9D9", border_color="#FFFFFF", text_color="black",
+                                   textvariable=self.quantity)
+        self.quantity_entry.place(x=205 / 1920 * self.width, y=550 / 974 * self.height)
+
+        #Right Side
+        #Price
+        self.price_text = ctk.CTkLabel(self.root, text="Price:",
+                                      font=("Arial", 23),
+                                      bg_color="#FFFFFF", fg_color="#FFFFFF",
+                                      text_color="black")
+        self.price_text.place(x=937 / 1920 * self.width, y=209 / 974 * self.height)
+
+        self.price = ctk.StringVar()
+        self.price_entry = ctk.CTkEntry(self.root, font=("Arial", 18), width=395 / 1536 * self.width,
+                                       height=45 / 864 * self.height, bg_color="#FFFFFF",
+                                       fg_color="#D9D9D9", border_color="#FFFFFF", text_color="black",
+                                       textvariable=self.price)
+        self.price_entry.place(x=935 / 1920 * self.width, y=255 / 974 * self.height)
+
+        #Status
+        self.status_text = ctk.CTkLabel(self.root, text="Status:",
+                                          font=("Arial", 23),
+                                          bg_color="#FFFFFF", fg_color="#FFFFFF",
+                                          text_color="black")
+        self.status_text.place(x=937 / 1920 * self.width, y=360 / 974 * self.height)
+
+        self.status = ctk.StringVar()
+        self.status_entry = ctk.CTkComboBox(self.root, values=["In Stock", "Out of Stock", "Unavailable"],
+                                            font=("Arial", 18), width=395 / 1536 * self.width,
+                                           height=45 / 864 * self.height, bg_color="#FFFFFF",
+                                           fg_color="#D9D9D9", border_color="#FFFFFF", text_color="black",
+                                           )
+        self.status_entry.place(x=935 / 1920 * self.width, y=400 / 974 * self.height)
+
+        #Registration Date
+        self.date_text = ctk.CTkLabel(self.root, text="Registration Date:",
+                                          font=("Arial", 23),
+                                          bg_color="#FFFFFF", fg_color="#FFFFFF",
+                                          text_color="black")
+        self.date_text.place(x=937 / 1920 * self.width, y=508 / 974 * self.height)
+
+        self.date = ctk.StringVar(value= datetime.now().strftime("%d-%m-%Y"))
+        self.date_entry = ctk.CTkEntry(self.root, font=("Arial", 18), width=395 / 1536 * self.width,
+                                           height=45 / 864 * self.height, bg_color="#FFFFFF",
+                                           fg_color="#D9D9D9", border_color="#FFFFFF", text_color="black",
+                                           textvariable=self.date, state="readonly")
+        self.date_entry.place(x=935 / 1920 * self.width, y=550 / 974 * self.height)
+
+        #Back Button
+        self.back_button = ctk.CTkButton(root, text="Back", bg_color="#FFFFFF", fg_color="#2A50CB",
+                                       text_color="#FFFCFC",
+                                       border_color="#1572D3", width=159, height=44,
+                                       font=("Inter", 20), command=self.go_back)
+        self.back_button.place(x=113 / 1920 * root.winfo_screenwidth(), y=730 / 974 * root.winfo_screenheight())
+
+        #Add Product Button
+        self.add_button = ctk.CTkButton(root, text="Add Product", bg_color="#FFFFFF", fg_color="#2A50CB",
+                                         text_color="#FFFCFC",
+                                         border_color="#1572D3", width=159, height=44,
+                                         font=("Inter", 20), command=self.add_item)
+        self.add_button.place(x=1526 / 1920 * root.winfo_screenwidth(), y=730 / 974 * root.winfo_screenheight())
+
+        #OR CODES
+        self.qr_label = ctk.CTkLabel(self.root, text="QR Code will appear here", bg_color="#FFFFFF",
+                                     fg_color="#2A50CB",
+                                     width=197, height=197)
+        self.qr_label.place(x=1499 / 1920 * self.width, y=280 / 974 * self.height)
+
+        # Product image placeholder
+        self.product_image_preview = ctk.CTkLabel(self.root, text="Product Image", bg_color="#FFFFFF",
+                                                  fg_color="#2A50CB",
+                                                  width=197, height=197)
+        self.product_image_preview.place(x=1499 / 1920 * self.width, y=280 / 974 * self.height)
+
+        #Upload Image
+        self.product_image_path = None
+
+        self.upload_btn = ctk.CTkButton(self.root, text="Upload Product Image",
+                                        command=self.upload_product_image, bg_color="#FFFFFF",
+                                        fg_color="#2A50CB", text_color="white", width=200)
+        self.upload_btn.place(x=1499 / 1920 * self.width, y=200 / 974 * self.height)
+
+    def add_item(self):
+        item_name = self.item_entry.get().strip()
+        item_name = item_name.lower().title()
+
+        # Reject if item name has no letters
+        if not any(char.isalpha() for char in item_name):
+            messagebox.showerror("Invalid Name", "Item Name Should Not Only Contain Numbers.")
+            return
+
+        category = self.category_entry.get().strip()
+        quantity = self.quantity_entry.get().strip()
+        price = self.price_entry.get().strip()
+        status = self.status_entry.get().strip()
+        register_date = self.date_entry.get()
+
+        image_data = None
+        if self.product_image_path:
+            with open(self.product_image_path, 'rb') as f:
+                image_data = f.read()
+
+        if not item_name or not category or not quantity or not price or not status:
+            messagebox.showerror("Error", "All Fields are required")
+            return
+
+        if not self.product_image_path:
+            messagebox.showerror("Error", "Please upload a product image before adding the item.")
+            return
+
+        # Validate quantity
+        try:
+            quantity = int(quantity)
+        except ValueError:
+            messagebox.showerror("Invalid Quantity", "Quantity must be a whole number.\n"
+                                                     "Example: 5 or 120")
+            return
+
+        # Validate price
+        try:
+            price = float(price)
+        except ValueError:
+            messagebox.showerror("Invalid Price", "Price must be a valid number.\n"
+                                                  "Example: 0.09 or 250.00")
+            return
+
+        conn = sqlite3.connect('Trackwise.db')
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT item_name FROM inventory WHERE LOWER(item_name) = LOWER(?)", (item_name,))
+        existing_item = cursor.fetchone()
+
+        if existing_item:
+            conn.close()
+            messagebox.showerror("Duplicate Product", f"'{item_name}' Already Exists.")
+            return
+
+        cursor.execute("""
+            INSERT INTO inventory (item_name, category, quantity, price, status, register_date, product_image)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (item_name, category, quantity, price, status, register_date, image_data))
+        conn.commit()
+        item_id = cursor.lastrowid
+        conn.close()
+
+        qr_data = (f"Item ID: {item_id}\n"
+                   f"Name: {item_name}\n"
+                   f"Category: {category}\n"
+                   f"Original Price: RM{price}\n"
+                   f"Register Date: {register_date}")
+
+        os.makedirs(QR_FOLDER, exist_ok=True)
+        qr_img_path = os.path.join(QR_FOLDER, f"item_{item_id}.png")
+        qr_code = qrcode.make(qr_data)
+        qr_code.save(qr_img_path)
+
+        qr_display_img = Image.open(qr_img_path)
+        qr_tk_img = ctk.CTkImage(light_image=qr_display_img, size=(197, 197))
+        self.qr_label.configure(image=qr_tk_img, text="")
+        self.qr_label.image = qr_tk_img
+
+        messagebox.showinfo("Success", f"Item added successfully!\n"
+                                       f"QR Code saved at {qr_img_path}")
+
+        self.show_qr_popup(qr_img_path, item_id)
+
+        self.item.set("")
+        self.category.set("")
+        self.quantity.set("")
+        self.price.set("")
+        self.status.set("")
+
+    def go_back(self):
+        try:
+            subprocess.Popen(["python", "Admin_Dashboard.py"])
+            self.root.destroy()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open Admin Dashboard: {e}")
+
+    def show_qr_popup(self, qr_img_path, item_id):
+        popup = ctk.CTkToplevel(self.root)
+        popup.title("QR Code Generated")
+        popup.geometry("360x520")
+
+        label = ctk.CTkLabel(popup, text="Item added successfully!\nHere is the QR code:",
+                             font=("Arial", 16), text_color="white")
+        label.pack(pady=10)
+
+        # Load and scale image using CTkImage
+        img = Image.open(qr_img_path)
+        ctk_img = ctk.CTkImage(light_image=img, size=(300, 300))
+
+        qr_label = ctk.CTkLabel(popup, image=ctk_img, text="")
+        qr_label.image = ctk_img  # prevent garbage collection
+        qr_label.pack(pady=10)
+
+        #Generate PDF
+        generate_pdf_btn = ctk.CTkButton(popup, text="Generate PDF",
+                                         command=lambda: self.save_qr_as_pdf(qr_img_path, item_id, self.item.get()),
+                                         fg_color="#2A50CB", text_color="white", width=120)
+        generate_pdf_btn.pack(pady=8)
+
+        # Close Button
+        close_btn = ctk.CTkButton(popup, text="Close", command=popup.destroy,
+                                  fg_color="#2A50CB", text_color="white", width=100)
+        close_btn.pack(pady=13)
+
+    def upload_product_image(self):
+        file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.png;*.jpg;*.jpeg")])
+        if file_path:
+            self.product_image_path = file_path
+            img = Image.open(file_path)
+            ctk_img = ctk.CTkImage(light_image=img, size=(197, 197))  # scale small
+            self.product_image_preview.configure(image=ctk_img, text="")
+            self.product_image_preview.image = ctk_img
+
+    def save_qr_as_pdf(self, qr_img_path, item_id, product_name):
+        width, height = 60 * mm, 60 * mm
+        pdf_path = os.path.join(QR_FOLDER, f"item_{item_id}.pdf")
+
+        c = canvas.Canvas(pdf_path, pagesize=(width, height))
+
+        # Draw product name as heading
+        c.setFont("Helvetica-Bold", 12)
+        text_width = c.stringWidth(product_name, "Helvetica-Bold", 12)
+        c.drawString((width - text_width) / 2, height - 20, product_name)
+
+        # Draw QR code centered below heading
+        qr_size = 40 * mm
+        qr_x = (width - qr_size) / 2
+        qr_y = (height - 20 - qr_size - 10)
+        c.drawImage(qr_img_path, qr_x, qr_y, width=qr_size, height=qr_size)
+
+        c.save()
+
+        messagebox.showinfo("PDF Saved", f"QR Code PDF saved to:\n{pdf_path}")
+
+        # Automatically open the PDF
+        try:
+            if platform.system() == "Windows":
+                os.startfile(pdf_path)
+            elif platform.system() == "Users":
+                subprocess.call(['open', pdf_path])
+            else:
+                subprocess.call(['xdg-open', pdf_path])
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open PDF:\n{e}")
+
+
+root = ctk.CTk()
+app = Register_Product(root)
+root.mainloop()
