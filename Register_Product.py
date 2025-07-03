@@ -238,7 +238,9 @@ class Register_Product:
         qr_data = (f"Item ID: {item_id}\n"
                    f"Name: {item_name}\n"
                    f"Category: {category}\n"
-                   f"Original Price: RM{price}\n"
+                   f"Quantity: {quantity}\n"
+                   f"Price: RM{price}\n"
+                   f"Status:{status}\n"
                    f"Register Date: {register_date}")
 
         os.makedirs(QR_FOLDER, exist_ok=True)
