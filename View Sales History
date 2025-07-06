@@ -68,8 +68,7 @@ class SalesHistoryPage(ctk.CTkFrame):
         ctk.CTkButton(self.left_frame, text="Filter", command=self.fetch_sales_data, width=238, height=35,fg_color="#2155CD",font=("Arial", 20)).place(x=10, y=270)
         ctk.CTkButton(self.left_frame, text="Print Report", command=self.generate_pdf_report, width=238, height=35,fg_color="#2155CD",font=("Arial", 20)).place(x=10, y=340)
         ctk.CTkButton(self.left_frame, text="Generate Sales Chart", command=self.generate_sales_chart, width=238,height=35,fg_color="#2155CD",font=("Arial", 20)).place(x=10, y=410)
-        ctk.CTkButton(self.left_frame, text="Back", command=self.back_to_dashboard, width=238,height=35, fg_color="#2155CD",font=("Arial", 20)).place(x=10, y=480)
-
+        ctk.CTkButton(self.left_frame, text="Sales Analysis", command=self.sales_analysis, width=238,height=35, fg_color="#2155CD", font=("Arial", 20)).place(x=10, y=480)
         # Treeview in right frame
         columns = ("Date", "Item Name", "Category", "Quantity Sold", "Total Price (RM)")
         self.tree = ttk.Treeview(self.right_frame, columns=columns, show="headings", height=20)
@@ -87,22 +86,19 @@ class SalesHistoryPage(ctk.CTkFrame):
         self.left_frame.place(x=0, y=self.frame.winfo_height() - self.left_frame.winfo_reqheight())
         self.right_frame.place(x=300, y=self.frame.winfo_height() - self.right_frame.winfo_reqheight())
 
-    def back_to_dashboard(self):
-        self.controller.show_frame("ManagerDashboard")
-
     def fetch_sales_data(self):
         conn = sqlite3.connect("Trackwise.db")
         cursor = conn.cursor()
 
         query = """
-        SELECT strftime('%Y-%m-%d',date),item_name,category,quantity_sold,total_price
-        FROM sales WHERE 1=1
+        SELECT strftime('%Y-%m-%d',sale_date),item_name,category,quantity_sold,total_price
+        FROM Sales WHERE 1=1
         """
         params = []
         from_date = self.from_date_var.get()
         to_date = self.to_date_var.get()
         if from_date and to_date:
-            query += " AND DATE(date) BETWEEN ? AND ?"
+            query += " AND DATE(sale_date) BETWEEN ? AND ?"
             params.extend([from_date, to_date])
         selected_category = self.category_var.get()
         if selected_category and selected_category != "All":
@@ -170,7 +166,7 @@ class SalesHistoryPage(ctk.CTkFrame):
         cursor  = conn.cursor()
         query = """
         SELECT item_name, SUM(quantity_sold)
-        FROM sales WHERE 1=1
+        FROM Sales WHERE 1=1
         """
         params = []
 
@@ -178,7 +174,7 @@ class SalesHistoryPage(ctk.CTkFrame):
         to_date = self.to_date_var.get()
 
         if from_date and to_date:
-            query += " AND DATE(date) BETWEEN ? AND ?"
+            query += " AND DATE(sale_date) BETWEEN ? AND ?"
             params.extend([from_date, to_date])
 
         selected_category = self.category_var.get()
@@ -204,3 +200,9 @@ class SalesHistoryPage(ctk.CTkFrame):
         ax.tick_params(axis='x',rotation=45)
         plt.tight_layout()
         plt.show()
+
+    def sales_analysis(self):
+        if self.controller.current_dashboard:
+            self.controller.current_dashboard.load_page("sales_analysis")
+        else:
+            self.controller.show_frame("SaleAnalysis")
