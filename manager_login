@@ -28,8 +28,17 @@ class LoginPage(ctk.CTkFrame):
             role TEXT NOT NULL,
             email TEXT, phone TEXT, dob TEXT,
             password TEXT NOT NULL, photo_path TEXT)''')
-        password = "trackwise123"  # You can change this
-        hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+        default_username = "trackwise"
+        default_password = "trackwise123"
+        cursor.execute("SELECT * FROM users WHERE username = ?", (default_username,))
+        if cursor.fetchone() is None:
+            hashed_password = bcrypt.hashpw(default_password.encode(), bcrypt.gensalt())
+            cursor.execute('''
+                    INSERT INTO users (username, role, email, phone, dob, password, photo_path)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (
+            default_username, "Manager", "trackwise@example.com", "0123456789", "1990-01-01", hashed_password, None))
 
         conn.commit()
         conn.close()
@@ -47,7 +56,7 @@ class LoginPage(ctk.CTkFrame):
         if user:
             user_id,stored_hashed_password, role = user
 
-            if bcrypt.checkpw(password.encode(), stored_hashed_password.encode()):
+            if bcrypt.checkpw(password.encode(), stored_hashed_password):
                 if role == "Admin":
                     messagebox.showinfo("Login Successful", f"Welcome {role.capitalize()}!")
                     self.controller.logged_in_user_id = user_id
@@ -110,15 +119,3 @@ class LoginPage(ctk.CTkFrame):
         new_label = ctk.CTkLabel(self, text="Create a New Account", font=("Arial", 17), bg_color="#D9D9D9", text_color="#5885F0")
         new_label.place(x=266 / 1920 * self.width, y=740 / 974 * self.height)
         new_label.bind("<Button-1>", lambda e: self.new_account())
-
-        back_button = ctk.CTkButton(self, text="Back", bg_color="#D9D9D9", fg_color="Blue",
-                                       text_color="white",
-                                       border_color="#1572D3", width=129, height=35,
-                                       font=("Iter", 14),command=self.back)
-        back_button.place(x=866 / 1920 * self.width, y=800 / 974 * self.height)
-
-        admin_button = ctk.CTkButton(self, text="Trackwise", bg_color="#D9D9D9", fg_color="Blue",
-                                     text_color="white",
-                                     border_color="#1572D3", width=129, height=35,
-                                     font=("Inter", 14))
-        admin_button.place(x=1623 / 1920 * self.width, y=800 / 974 * self.height)
