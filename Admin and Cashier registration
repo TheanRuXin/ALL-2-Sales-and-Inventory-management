@@ -33,7 +33,7 @@ class Register(ctk.CTkFrame):
         main_frame = ctk.CTkFrame(self, fg_color="#D9D9D9", border_width=0, corner_radius=15)
         main_frame.pack(pady=(50,50), padx=200, fill="both", expand=True)
 
-        ctk.CTkLabel(main_frame, text="Create Account", font=("Arial", 48, "bold")).pack(pady=10)
+        ctk.CTkLabel(main_frame, text="Create Account For New Employee", font=("Arial", 40, "bold")).pack(pady=10)
 
         second_frame = ctk.CTkFrame(main_frame, fg_color="#FFFFFF", corner_radius=15)
         second_frame.pack(pady=(20, 50), padx=100, fill="both", expand=True)
@@ -56,7 +56,7 @@ class Register(ctk.CTkFrame):
 
         ctk.CTkLabel(left_frame, text="Select User Type:", font=("Arial", 24)).pack(pady=(10,5), anchor="w")
         self.role_var = ctk.StringVar(value="Select User Type")
-        self.role_dropdown = ctk.CTkComboBox(left_frame, values=["Admin", "Cashier","Manager"], variable=self.role_var, width=350,height=35)
+        self.role_dropdown = ctk.CTkComboBox(left_frame, values=["Admin", "Cashier"], variable=self.role_var, width=350,height=35)
         self.role_dropdown.pack(pady=(0, 30))
 
         # Right side: Password and Confirm Password
@@ -72,29 +72,24 @@ class Register(ctk.CTkFrame):
         self.confirm_password_entry = ctk.CTkEntry(right_frame, placeholder_text="Confirm Password", show="*",width=350, height=35, justify="center", font=("Arial", 24))
         self.confirm_password_entry.pack(pady=(0, 30))
 
-        # Register button centered across both columns
-        ctk.CTkButton(second_frame, text="Register", width=250, height=30, fg_color="#2A50CB", hover_color="#1a39a3",command=self.register_user).grid(row=1, column=0, columnspan=2, pady=(30, 10))
-
         # Back button
-        self.back_button = ctk.CTkButton(main_frame, text="Back", width=100, height=30, fg_color="#2A50CB",hover_color="#1a39a3", command=self.back_to_dashboard)
-        self.back_button.pack(pady=(1, 20), anchor='center')
+        self.register_button = ctk.CTkButton(main_frame, text="Register", width=250, height=40, font=("Arial", 24),hover_color="#1a39a3", command=self.register_user)
+        self.register_button.pack(pady=(1, 20), anchor='center')
 
     def Trackwise_db(self):
         conn = sqlite3.connect("Trackwise.db")
         cursor = conn.cursor()
         cursor.execute('''CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL,
-        password TEXT NOT NULL,
-        role TEXT NOT NULL,
-        email TEXT,
-        phone TEXT,
-        dob TEXT)''')
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT NOT NULL,
+                    role TEXT NOT NULL,
+                    email TEXT, phone TEXT, dob TEXT,
+                    password TEXT NOT NULL, photo_path TEXT)''')
         conn.commit()
         conn.close()
 
     def hash_password(self,password):
-        return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+        return bcrypt.hashpw(password.encode(), bcrypt.gensalt())
 
     def send_email(self, username, password, recipient_email):
         sender_email = "ruxinthean@gmail.com"  # Replace with your email
@@ -119,9 +114,6 @@ class Register(ctk.CTkFrame):
                 print("Email sent successfully!")
         except Exception as e:
             print(f"Error sending email: {e}")
-
-    def back_to_dashboard(self):
-        self.controller.show_frame("ManagerDashboard")
 
     def validate_email(self, email):
         # Regular expression for validating email
@@ -175,4 +167,10 @@ class Register(ctk.CTkFrame):
         messagebox.showinfo("Success", "User registered successfully!")
         recipient_email = email
         self.send_email(username, password, recipient_email)
+        self.username_entry.delete(0, 'end')
+        self.email_entry.delete(0, 'end')
+        self.role_var.set("Select User Type")
+        self.phone_entry.delete(0, 'end')
+        self.password_entry.delete(0, 'end')
+        self.confirm_password_entry.delete(0, 'end')
         self.controller.show_frame("ManagerDashboard")
