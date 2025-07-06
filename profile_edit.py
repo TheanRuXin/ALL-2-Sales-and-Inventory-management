@@ -6,13 +6,17 @@ import bcrypt
 import os, re
 from datetime import datetime
 from tkcalendar import DateEntry
-from profile import UserProfileApp
 
 class EditProfileApp(ctk.CTkFrame):
     def __init__(self, parent,controller, user_id):
         super().__init__(parent)
         self.controller = controller
-        self.user_id = user_id
+        if isinstance(user_id, str):
+            self.user_id = int(user_id)
+        elif hasattr(user_id, 'get'):
+            self.user_id = int(user_id.get())
+        else:
+            self.user_id = int(user_id)
         self.photo_path = None
         self.screen_width = self.winfo_screenwidth()
         self.screen_height = self.winfo_screenheight()
@@ -24,7 +28,7 @@ class EditProfileApp(ctk.CTkFrame):
     def create_main_frame(self):
         self.main_frame_width = int(self.screen_width * 0.92)
         self.main_frame_height = int(self.screen_height * 0.76)
-        main_frame_x = (self.screen_width - self.main_frame_width) // 2
+        main_frame_x = (self.screen_width - self.main_frame_width) // 2 -30
         main_frame_y = (self.screen_height - self.main_frame_height) // 2 - 35
 
         self.main_frame = ctk.CTkFrame(
@@ -247,7 +251,7 @@ class EditProfileApp(ctk.CTkFrame):
                 conn.close()
                 return
 
-            if not bcrypt.checkpw(old_pw.encode(), current_hashed_pw.encode()):
+            if not bcrypt.checkpw(old_pw.encode(), current_hashed_pw):
                 messagebox.showerror("Error", "Old password is incorrect.")
                 conn.close()
                 return
@@ -280,7 +284,8 @@ class EditProfileApp(ctk.CTkFrame):
         conn.commit()
         conn.close()
         messagebox.showinfo("Success", "Profile updated successfully.")
-        self.controller.show_profile(self.user_id)
+        if hasattr(self.controller, 'load_page'):
+            self.controller.load_page("user", user_id=self.user_id)
 
     def cancel_edit(self):
-        self.controller.show_profile(self.user_id)
+        self.controller.current_dashboard.load_page("user", user_id=self.user_id)
