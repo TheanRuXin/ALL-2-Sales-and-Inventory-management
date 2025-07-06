@@ -21,22 +21,20 @@ matplotlib.rcParams['font.family'] = 'Arial'
 matplotlib.rcParams['font.size'] = 13
 matplotlib.use('Agg')
 
-class InventoryApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Sales Analysis")
-        self.root.geometry("1920x974")
-        ctk.set_appearance_mode("light")
-        self.root.configure(bg="white")  # Set app background to white
+class SaleAnalysis(ctk.CTkFrame):
+    def __init__(self,parent,controller):
+        super().__init__(parent)
+        self.controller = controller
+        self.configure(fg_color="white")
         self.setup_ui()
 
     def setup_ui(self):
-        title_label = ctk.CTkLabel(self.root, text="Sales Analysis", font=("Arial", 32, "bold"), text_color="black")
+        title_label = ctk.CTkLabel(self, text="Sales Analysis", font=("Arial", 32, "bold"), text_color="black")
         title_label.place(x=50, y=20)
-        filter_frame = ctk.CTkFrame(self.root, fg_color="white", bg_color="white")
+        filter_frame = ctk.CTkFrame(self, fg_color="white", bg_color="white")
         filter_frame.pack(pady=(80,50))
-        logo_image = CTkImage(light_image=Image.open("logo.png"), size=(90, 80))
-        logo_label = ctk.CTkLabel(self.root, image=logo_image, text="")
+        logo_image = CTkImage(light_image=Image.open(r"C:\Users\User\Documents\Ruxin file\ALL 2\logo.png"), size=(90, 80))
+        logo_label = ctk.CTkLabel(self, image=logo_image, text="")
         logo_label.place(relx=1.0, x=-60, y=20, anchor="ne")
 
         today = datetime.today()
@@ -63,9 +61,9 @@ class InventoryApp:
         ctk.CTkButton(filter_frame, text="Apply Filter", command=self.refresh_charts,font=("Arial",16),height=35, width=160).pack(side="left", padx=10)
         ctk.CTkButton(filter_frame, text="Export All to PDF", command=self.export_all_charts_pdf,font=("Arial",16),height=35, width=160).pack(side="left",
                                                                                                        padx=5)
-        self.summary_frame = ctk.CTkFrame(self.root, fg_color="#fff7e6", bg_color="#fff7e6")
+        self.summary_frame = ctk.CTkFrame(self, fg_color="#fff7e6", bg_color="#fff7e6")
         self.summary_frame.pack(pady=(0, 25))  # Right below filter_frame
-        self.chart_frame = ctk.CTkFrame(self.root, fg_color="white", bg_color="white")
+        self.chart_frame = ctk.CTkFrame(self, fg_color="white", bg_color="white")
         self.chart_frame.pack(fill="both", expand=True, padx=20, pady=(30,10))
         self.refresh_charts()
 
@@ -124,7 +122,7 @@ class InventoryApp:
         return frame
 
     def show_fullscreen_chart(self, title, plot_func):
-        win = ctk.CTkToplevel(self.root)
+        win = ctk.CTkToplevel(self)
         win.title(title)
         win.geometry("1000x700")
 
@@ -335,7 +333,7 @@ class InventoryApp:
         plt.close('all')
         conn = sqlite3.connect("Trackwise.db")
         cursor = conn.cursor()
-        cursor.execute("SELECT category, SUM(quantity_sold) FROM sales WHERE DATE(date) BETWEEN ? AND ? GROUP BY category", (from_date, to_date))
+        cursor.execute("SELECT category, SUM(quantity_sold) FROM Sales WHERE DATE(sale_date) BETWEEN ? AND ? GROUP BY category", (from_date, to_date))
         rows = cursor.fetchall()
         conn.close()
 
@@ -368,7 +366,7 @@ class InventoryApp:
     def fetch_categories(self):
         conn = sqlite3.connect("Trackwise.db")
         cursor = conn.cursor()
-        cursor.execute("SELECT DISTINCT category FROM sales")
+        cursor.execute("SELECT DISTINCT category FROM Sales")
         categories = [row[0] for row in cursor.fetchall()]
         conn.close()
         return ["All"] + categories
@@ -376,11 +374,11 @@ class InventoryApp:
     def query_sales_data(self, from_date, to_date, category=None):
         conn = sqlite3.connect("Trackwise.db")
         cursor = conn.cursor()
-        query = "SELECT item_name, SUM(quantity_sold) FROM sales WHERE 1=1"
+        query = "SELECT item_name, SUM(quantity_sold) FROM Sales WHERE 1=1"
         params = []
 
         if from_date and to_date:
-            query += " AND DATE(date) BETWEEN ? AND ?"
+            query += " AND DATE(sale_date) BETWEEN ? AND ?"
             params.extend([from_date, to_date])
 
         if category and category != "All":
@@ -400,9 +398,9 @@ class InventoryApp:
         conn = sqlite3.connect("Trackwise.db")
         cursor = conn.cursor()
         query = """
-            SELECT item_name, DATE(date), SUM(quantity_sold)
+            SELECT item_name, DATE(sale_date), SUM(quantity_sold)
             FROM sales
-            WHERE DATE(date) BETWEEN ? AND ?
+            WHERE DATE(sale_date) BETWEEN ? AND ?
         """
         params = [from_date, to_date]
 
@@ -410,7 +408,7 @@ class InventoryApp:
             query += " AND category = ?"
             params.append(category)
 
-        query += " GROUP BY item_name, DATE(date) ORDER BY item_name, DATE(date)"
+        query += " GROUP BY item_name, DATE(sale_date) ORDER BY item_name, DATE(sale_date)"
         cursor.execute(query, params)
         rows = cursor.fetchall()
         conn.close()
@@ -432,8 +430,8 @@ class InventoryApp:
             SELECT 
                 SUM(total_price) as total_revenue,
                 SUM(quantity_sold) as total_quantity
-            FROM sales
-            WHERE DATE(date) BETWEEN ? AND ?
+            FROM Sales
+            WHERE DATE(sale_date) BETWEEN ? AND ?
         """
         params = [from_date, to_date]
         if category and category != "All":
@@ -447,8 +445,8 @@ class InventoryApp:
         # Get top product
         top_product_query = """
             SELECT item_name, SUM(quantity_sold) as total_qty
-            FROM sales
-            WHERE DATE(date) BETWEEN ? AND ?
+            FROM Sales
+            WHERE DATE(sale_date) BETWEEN ? AND ?
         """
         top_params = [from_date, to_date]
         if category and category != "All":
@@ -477,8 +475,3 @@ class InventoryApp:
 
             ctk.CTkLabel(item_frame, text=label, font=("Arial", 16, "bold"), text_color="black").pack()
             ctk.CTkLabel(item_frame, text=value, font=("Arial", 16), text_color="gray20").pack()
-
-if __name__ == "__main__":
-    root = ctk.CTk(fg_color="white")
-    app = InventoryApp(root)
-    root.mainloop()
