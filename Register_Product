@@ -224,12 +224,15 @@ class RegisterProductPage(ctk.CTkFrame):
 
         try:
             quantity = int(quantity)
+            if not (1 <= quantity <= 144):
+                messagebox.showerror("Invalid Quantity", "Quantity must be between 1 and 144.\n"
+                                                         "Example: 5 or 120")
+                return
         except ValueError:
             messagebox.showerror("Invalid Quantity", "Quantity must be a whole number.\n"
                                                      "Example: 5 or 120")
             return
 
-            # Validate price
         try:
             price = float(price)
         except ValueError:
