@@ -2,131 +2,55 @@ import customtkinter as ctk
 import sqlite3
 from tkinter import messagebox
 
-class AddCategoryWindow(ctk.CTkToplevel):
+class AddCategoryWindow(ctk.CTkFrame):
     def __init__(self, parent, on_close_callback=None):
         super().__init__(parent)
         self.on_close_callback = on_close_callback
-        self.title("Add Category")
-        self.geometry("700x400")
-        self.configure(fg_color="#FFFFFF")
-        self.resizable(True, True)
-        self.attributes("-topmost", True)
 
-        self.width, self.height = 700, 400
+        screen_width = parent.winfo_screenwidth()
+        screen_height = parent.winfo_screenheight()
 
-        self.create_widgets()
-        self.protocol("WM_DELETE_WINDOW", self.on_closing)
+        # Adjust position to be near the QR image (which is at x ≈ 1499 / 1920 * width)
+        x = int(1499 / 1920 * screen_width)  # You can tweak this 1280 value to shift left/right
+        y = int(510 / 974 * screen_height)
 
-    def create_widgets(self):
-        # Add Category Section
-        self.label_add = ctk.CTkLabel(self, text="Enter New Category:", font=("Arial", 20))
-        self.label_add.pack(pady=(20, 5))
+        self.configure(width=400, height=500, fg_color="#FFFFFF")
+        self.configure(corner_radius=0)
+
+        self.place(x=x, y=y)
 
         self.category_var = ctk.StringVar()
-        self.entry_add = ctk.CTkEntry(
-            self,
-            textvariable=self.category_var,
-            font=("Arial", 16),
-            width=300,
-            placeholder_text="Type new category here"
-        )
+        self.remove_var = ctk.StringVar()
+
+        self.create_widgets()
+        self.load_categories()
+
+    def create_widgets(self):
+        content_frame = ctk.CTkFrame(self, fg_color="transparent")
+        content_frame.pack(expand=True)  # Center within the main frame
+
+        self.label_add = ctk.CTkLabel(content_frame, text="Enter New Category:", font=("Arial", 20))
+        self.label_add.pack(pady=(40, 10))
+
+        self.entry_add = ctk.CTkEntry(content_frame, textvariable=self.category_var, font=("Arial", 16),
+                                      width=300, placeholder_text="Type new category here")
         self.entry_add.pack(pady=5)
 
-        self.add_button = ctk.CTkButton(self, text="Add Category", command=self.add_category)
-        self.add_button.pack(pady=(5, 15))
+        self.add_button = ctk.CTkButton(content_frame, text="Add Category", command=self.add_category)
+        self.add_button.pack(pady=(5, 20))
 
-        self.entry_add.bind("<Return>", lambda event: self.add_category())
+        self.label_remove = ctk.CTkLabel(content_frame, text="Remove Existing Category:", font=("Arial", 20))
+        self.label_remove.pack(pady=(10, 10))
 
-        # Remove Category Section
-        self.label_remove = ctk.CTkLabel(self, text="Select Category to Remove:", font=("Arial", 20))
-        self.label_remove.pack(pady=(10, 5))
-
-        self.remove_var = ctk.StringVar()
-        self.dropdown_remove = ctk.CTkComboBox(
-            master=self,
-            variable=self.remove_var,
-            values=[],  # Will be set later
-            width=300,
-            font=("Arial", 16),
-            text_color="#0882c4",
-            fg_color="white",
-            border_color="gray",
-            border_width=2,
-            dropdown_fg_color="#cce7f9",
-            dropdown_text_color="#014894",
-            dropdown_font=("Inter", 14),
-            dropdown_hover_color="#8dc0f7",
-            button_color="#0C5481",
-            button_hover_color="#2874ed"
-        )
+        self.dropdown_remove = ctk.CTkComboBox(content_frame, variable=self.remove_var, values=[], width=300)
         self.dropdown_remove.pack(pady=5)
 
-        self.remove_button = ctk.CTkButton(self, text="Remove Category", fg_color="red", command=self.remove_category)
-        self.remove_button.pack(pady=(5, 15))
+        self.remove_button = ctk.CTkButton(content_frame, text="Remove Category", fg_color="red",
+                                           command=self.remove_category)
+        self.remove_button.pack(pady=(5, 20))
 
-        self.cancel_button = ctk.CTkButton(self, text="Cancel", fg_color="green", command=self.destroy)
-        self.cancel_button.pack(pady=5)
-
-        self.back_button = ctk.CTkButton(self, text="Back", fg_color="#2A50CB", command=self.go_back)
-        self.back_button.pack(pady=5)
-
-        self.load_categories()
-        self.dropdown_remove.bind("<Return>", lambda event: self.remove_category())
-
-    def add_category(self):
-        new_category = self.category_var.get().strip()
-        if not new_category:
-            messagebox.showwarning("Warning", "Category name cannot be empty.",parent=self)
-            return
-
-        conn = sqlite3.connect('Trackwise.db')
-        cursor = conn.cursor()
-
-        try:
-            cursor.execute("INSERT INTO categories (name) VALUES (?)", (new_category,))
-            conn.commit()
-            messagebox.showinfo("Success", f"Category '{new_category}' added successfully!",parent=self)
-            self.category_var.set("")
-            self.load_categories()
-            if self.on_close_callback:
-                self.on_close_callback()
-        except sqlite3.IntegrityError:
-            messagebox.showwarning("Warning", f"Category '{new_category}' already exists.",parent=self)
-        finally:
-            conn.close()
-
-    def remove_category(self):
-        category_to_remove = self.remove_var.get()
-        if not category_to_remove or category_to_remove not in self.dropdown_remove.cget("values"):
-            messagebox.showwarning("Warning", "Please select a valid category to remove.",parent=self)
-            return
-
-        confirm = messagebox.askyesno("Confirm",
-                                      f"Are you sure you want to delete category '{category_to_remove}' and all related inventory items?",parent=self)
-        if not confirm:
-            return
-
-        conn = sqlite3.connect('Trackwise.db')
-        cursor = conn.cursor()
-
-        try:
-            # Remove related inventory items first
-            cursor.execute("DELETE FROM inventory WHERE category = ?", (category_to_remove,))
-
-            # Then remove from categories table
-            cursor.execute("DELETE FROM categories WHERE name = ?", (category_to_remove,))
-
-            conn.commit()
-            messagebox.showinfo("Success",
-                                f"Category '{category_to_remove}' and all related items were removed successfully!",parent=self)
-
-            self.remove_var.set("")
-            self.dropdown_remove.set("-- Select Category --")
-            self.load_categories()
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to remove category: {e}")
-        finally:
-            conn.close()
+        self.back_button = ctk.CTkButton(content_frame, text="Back", fg_color="green", command=self.go_back)
+        self.back_button.pack(pady=10)
 
     def load_categories(self):
         conn = sqlite3.connect('Trackwise.db')
@@ -138,10 +62,49 @@ class AddCategoryWindow(ctk.CTkToplevel):
         self.dropdown_remove.configure(values=categories)
         self.dropdown_remove.set("-- Select Category --")
 
-    def on_closing(self):
-        if self.on_close_callback:
-            self.on_close_callback()
-        self.destroy()
+    def add_category(self):
+        new_category = self.category_var.get().strip()
+        if not new_category:
+            messagebox.showwarning("Warning", "Category name cannot be empty.")
+            return
+
+        conn = sqlite3.connect('Trackwise.db')
+        cursor = conn.cursor()
+        try:
+            cursor.execute("INSERT INTO categories (name) VALUES (?)", (new_category,))
+            conn.commit()
+            messagebox.showinfo("Success", f"Category '{new_category}' added successfully!")
+            self.category_var.set("")
+            self.load_categories()
+        except sqlite3.IntegrityError:
+            messagebox.showwarning("Warning", f"Category '{new_category}' already exists.")
+        finally:
+            conn.close()
+
+    def remove_category(self):
+        category_to_remove = self.remove_var.get()
+        if not category_to_remove or category_to_remove not in self.dropdown_remove.cget("values"):
+            messagebox.showwarning("Warning", "Please select a valid category to remove.")
+            return
+
+        confirm = messagebox.askyesno("Confirm",
+                                      f"Are you sure you want to delete category '{category_to_remove}' and all related items?")
+        if not confirm:
+            return
+
+        conn = sqlite3.connect('Trackwise.db')
+        cursor = conn.cursor()
+        try:
+            cursor.execute("DELETE FROM inventory WHERE category = ?", (category_to_remove,))
+            cursor.execute("DELETE FROM categories WHERE name = ?", (category_to_remove,))
+            conn.commit()
+            messagebox.showinfo("Success", f"Category '{category_to_remove}' removed.")
+            self.remove_var.set("")
+            self.load_categories()
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+        finally:
+            conn.close()
 
     def go_back(self):
         self.destroy()
