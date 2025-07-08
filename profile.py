@@ -4,6 +4,7 @@ from customtkinter import CTkImage
 import sqlite3
 import os
 
+
 def initialize_database():
     conn = sqlite3.connect("Trackwise.db")
     cursor = conn.cursor()
@@ -37,7 +38,6 @@ class UserProfileApp(ctk.CTkFrame):
         self.load_profile_image()
         self.create_welcome_label()
         self.create_user_info_labels()
-        self.create_back_button()
 
     def get_user_data_from_db(self):
         try:
@@ -66,7 +66,7 @@ class UserProfileApp(ctk.CTkFrame):
     def create_main_frame(self):
         self.main_frame_width = int(self.screen_width * 0.92)
         self.main_frame_height = int(self.screen_height * 0.76)
-        main_frame_x = (self.screen_width - self.main_frame_width) // 2
+        main_frame_x = (self.screen_width - self.main_frame_width) // 2 - 30
         main_frame_y = (self.screen_height - self.main_frame_height) // 2 - 35
 
         self.main_frame = ctk.CTkFrame(
@@ -191,35 +191,8 @@ class UserProfileApp(ctk.CTkFrame):
             )
             value.place(x=right_x, y=start_y + 44 + i * gap)
 
-    def on_back_click(self):
-        role = self.user_data["role"].lower() if self.user_data and self.user_data["role"] else ""
-
-        if role == "admin":
-            self.controller.show_frame("AdminDashboard")
-        elif role == "manager":
-            self.controller.show_frame("ManagerDashboard")
-        elif role == "cashier":
-            self.controller.show_frame("POSApp")
-        else:
-            print("Unknown role. Cannot route to dashboard.")
-
-        self.destroy()
-
-    def create_back_button(self):
-        back_button = ctk.CTkButton(
-            master=self.main_frame,
-            text="← Back",
-            command=self.on_back_click,
-            width=100,
-            height=40,
-            font=("Inter", 16)
-        )
-        back_button.place(x=20, y=20)
-
     def load_edit_page(self):
-        from profile_edit import EditProfileApp
-        for widget in self.winfo_children():
-            widget.destroy()
-        edit_frame = EditProfileApp(self, self.controller, self.user_id)
-        edit_frame.pack(fill="both", expand=True)
+        self.controller.current_dashboard.load_page("edit_profile", user_id=self.user_id)
+
+
 
