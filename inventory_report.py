@@ -3,13 +3,14 @@ from customtkinter import CTkImage
 from PIL import Image
 from tkinter import ttk, messagebox, filedialog
 import sqlite3
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import tkinter as tk
 import matplotlib.pyplot as plt
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 from reportlab.lib.pagesizes import letter, landscape
 from reportlab.lib import colors
 from reportlab.platypus import Paragraph, Spacer, HRFlowable
 from reportlab.lib.styles import ParagraphStyle
-import subprocess
 
 class InventoryReport(ctk.CTkFrame):
     def __init__(self,parent,controller):
@@ -64,10 +65,6 @@ class InventoryReport(ctk.CTkFrame):
                                           width=150, height=35, font=("Inter", 16))
         self.button_chart.place(x=1100, y=100)
 
-        self.button_back = ctk.CTkButton(self, text="Back", command=self.go_back,
-                                         width=140, height=35, font=("Inter", 16))
-        self.button_back.place(x=50, y=680)
-
         # Treeview
         style = ttk.Style()
         style.configure("Treeview",rowheight=35, font=("Inter", 14))  # Font for rows
@@ -121,7 +118,7 @@ class InventoryReport(ctk.CTkFrame):
                 i.quantity AS closing_stock,
                 IFNULL(SUM(s.quantity_sold), 0) AS quantity_sold
             FROM inventory i
-            LEFT JOIN sales s ON i.id = s.item_id
+            LEFT JOIN Sales s ON i.product_id = s.product_id
         """
 
         conditions = []
@@ -258,13 +255,18 @@ class InventoryReport(ctk.CTkFrame):
         names = [row[1] for row in rows]
         closing_stock = [row[4] for row in rows]
 
-        plt.figure(figsize=(10, 6))
-        plt.barh(names, closing_stock, color='teal')
-        plt.xlabel("Closing Stock")
-        plt.ylabel("Item Name")
-        plt.title("Closing Stock")
-        plt.tight_layout()
-        plt.show()
+        # Create popup window
+        popup = tk.Toplevel(self)
+        popup.title("Inventory Bar Chart")
+        popup.geometry("900x600")
 
-    def go_back(self):
-        self.controller.show_frame("ManagerDashboard")
+        fig, ax = plt.subplots(figsize=(10, 6))
+        bars = ax.barh(names, closing_stock, color='teal')
+        ax.set_xlabel("Closing Stock")
+        ax.set_ylabel("Item Name")
+        ax.set_title("Closing Stock per Item")
+        fig.tight_layout()
+
+        canvas = FigureCanvasTkAgg(fig, master=popup)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
