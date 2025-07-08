@@ -2,13 +2,15 @@ import sqlite3
 import customtkinter as ctk
 from tkcalendar import DateEntry
 from tkinter import ttk
+import tkinter as tk
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import  SimpleDocTemplate, Table , TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 import os
-import matplotlib.cm as cm
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from PIL import Image
 
 class SalesHistoryPage(ctk.CTkFrame):
@@ -163,7 +165,7 @@ class SalesHistoryPage(ctk.CTkFrame):
 
     def generate_sales_chart(self):
         conn = sqlite3.connect("Trackwise.db")
-        cursor  = conn.cursor()
+        cursor = conn.cursor()
         query = """
         SELECT item_name, SUM(quantity_sold)
         FROM Sales WHERE 1=1
@@ -181,25 +183,35 @@ class SalesHistoryPage(ctk.CTkFrame):
         if selected_category and selected_category != "All":
             query += " AND category = ?"
             params.append(selected_category)
-        query += "GROUP BY item_name"
-        cursor.execute(query,params)
+        query += " GROUP BY item_name"
+        cursor.execute(query, params)
         rows = cursor.fetchall()
         conn.close()
 
         if not rows:
-            print("Nodata available for chart.")
+            print("No data available for chart.")
             return
-        items = [r[0]for r in rows]
-        quantities = [r[1]for r in rows]
+
+        items = [r[0] for r in rows]
+        quantities = [r[1] for r in rows]
         colors_list = [cm.get_cmap('tab20')(i) for i in range(len(items))]
-        fig, ax = plt.subplots(figsize = (10,6))
-        ax.bar(items,quantities,color=colors_list)
+
+        # New popup window
+        popup = tk.Toplevel()
+        popup.title("Sales Chart")
+        popup.geometry("900x600")
+
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.bar(items, quantities, color=colors_list)
         ax.set_title("Sales by Item")
         ax.set_xlabel("Item Name")
         ax.set_ylabel("Quantity Sold")
-        ax.tick_params(axis='x',rotation=45)
-        plt.tight_layout()
-        plt.show()
+        ax.tick_params(axis='x', rotation=45)
+        fig.tight_layout()
+
+        canvas = FigureCanvasTkAgg(fig, master=popup)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
     def sales_analysis(self):
         if self.controller.current_dashboard:
