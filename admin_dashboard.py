@@ -211,9 +211,11 @@ class AdminDashboard(ctk.CTkFrame):
             )
             page.pack(fill="both", expand=True)
 
+
         elif name == "logout":
             self.controller.logged_in_user_id = None
             self.controller.show_frame("LoginPage")
+            self.controller.frames["LoginPage"].clear_fields()
 
         else:
             ctk.CTkLabel(self.content_frame, text="Page coming soon...", font=("Arial", 24)).pack(pady=50)
