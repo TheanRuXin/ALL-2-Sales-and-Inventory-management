@@ -370,7 +370,9 @@ class ManageProductPage(ctk.CTkFrame):
         except ValueError:
             messagebox.showerror("Error", "Quantity must be an integer and Price must be a number.")
             return
-
+        if not (1 <= new_quantity_int <= 144):
+            messagebox.showerror("Error", "Quantity must be between 1 and 144.")
+            return
         # Original values from treeview (as strings)
         original_values = {
             "Name": item_values[1],
