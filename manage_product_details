@@ -25,21 +25,34 @@ class Setup_Database:
         conn.commit()
         conn.close()
 
-    def update_item(self,* ,item_id, product_id,item_name, category, quantity, price, status, registration_date):
+    def update_item(self, *, item_id, item_name, category, quantity, price, status, registration_date, image_blob=None):
         conn = sqlite3.connect(self.db_file)
         cursor = conn.cursor()
-        cursor.execute(
-            '''UPDATE inventory SET product_id=?,
-            item_name = ?, 
-            category = ?,
-            quantity = ?,
-            price = ?,
-            status = ?,
-            register_date = ?
-            WHERE id = ?''',
-            (product_id,item_name, category, int(quantity),
-             float(price), status, registration_date, item_id)
-        )
+        if image_blob:
+            cursor.execute(
+                '''UPDATE inventory SET
+                item_name = ?, 
+                category = ?,
+                quantity = ?,
+                price = ?,
+                status = ?,
+                register_date = ?,
+                product_image = ?
+                WHERE id = ?''',
+                (item_name, category, int(quantity), float(price), status, registration_date, image_blob, item_id)
+            )
+        else:
+            cursor.execute(
+                '''UPDATE inventory SET
+                item_name = ?, 
+                category = ?,
+                quantity = ?,
+                price = ?,
+                status = ?,
+                register_date = ?
+                WHERE id = ?''',
+                (item_name, category, int(quantity), float(price), status, registration_date, item_id)
+            )
         conn.commit()
         conn.close()
 
@@ -47,6 +60,7 @@ class ManageProductPage(ctk.CTkFrame):
     def __init__(self,parent,controller):
         super().__init__(parent)
         self.controller = controller
+        self.product_image_path = None
 
         self.width, self.height = 1574, 800
 
@@ -330,9 +344,8 @@ class ManageProductPage(ctk.CTkFrame):
             dark_image=qr_img,
             size=(200, 190)
         )
-
-        # Set the image on the label (and clear text if needed)
         self.qr_label.configure(image=self.qr_img, text="")
+        self.qr_label.image = self.qr_img
 
     def update_item_handler(self):
         selected_item = self.product_treeview.selection()
@@ -343,7 +356,7 @@ class ManageProductPage(ctk.CTkFrame):
         item_values = self.product_treeview.item(selected_item, "values")
         item_id = item_values[0]
         product_id = self.product_id_map.get(item_id, "")
-        # Current values from entry fields
+
         new_name = self.entries["Name"].get()
         new_category = self.entries["Category"].get()
         new_quantity = self.entries["Quantity"].get()
@@ -357,8 +370,6 @@ class ManageProductPage(ctk.CTkFrame):
         except ValueError:
             messagebox.showerror("Error", "Quantity must be an integer and Price must be a number.")
             return
-
-        new_status = self.entries["Status"].get()
 
         # Original values from treeview (as strings)
         original_values = {
@@ -379,7 +390,6 @@ class ManageProductPage(ctk.CTkFrame):
             "Register_Date": new_date,
         }
 
-        # Check if anything has changed
         if all(str(original_values[key]).strip().lower() == str(updated_values[key]).strip().lower() for key in original_values):
             messagebox.showinfo("No Changes", "No changes were made to the item.")
             return
@@ -388,21 +398,36 @@ class ManageProductPage(ctk.CTkFrame):
             messagebox.showerror("Error", f"An item with the name '{new_name}' already exists.")
             return
 
+        image_data = None
+        if self.product_image_path:
+            try:
+                with open(self.product_image_path, 'rb') as f:
+                    image_data = f.read()
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to read product image: {e}", parent=self)
+                return
+
         # Proceed with update
         self.db.update_item(
             item_name=new_name,
-            product_id=product_id,
             category=new_category,
             quantity=new_quantity_int,
             price=new_price_float,
             status=new_status,
             registration_date=new_date,
-            item_id=item_id
+            item_id=item_id,
+            image_blob = image_data
         )
 
         self.refresh_table()
+        for row_id in self.product_treeview.get_children():
+            values = self.product_treeview.item(row_id, "values")
+            if str(values[0]) == str(item_id):
+                self.product_treeview.selection_set(row_id)
+                self.on_treeview_select()
+                break
         messagebox.showinfo("Success", "Item Updated Successfully!")
-        self.clear_fields()
+
 
     def is_duplicate_name(self, name, exclude_id=None):
         for item in self.db.view_items():
