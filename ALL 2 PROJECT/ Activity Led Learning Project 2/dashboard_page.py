@@ -64,42 +64,54 @@ class Dashboard:
         ctk.CTkLabel(self.user_frame, image=user_icon, text="").pack(side="left", padx=(0, 10))
         ctk.CTkLabel(self.user_frame, text=f"Welcome, {self.cashier_name}", font=("Arial", 16, "bold"), text_color="#0C5481").pack(side="left")
 
-        # Dropdown panel
-        panel = ctk.CTkFrame(self.main_frame, fg_color="white")
-        panel.grid(row=0, column=0, sticky="ne", padx=20, pady=(60, 10))
-
-        self.category_var = ctk.StringVar(value="Select Category")
-        self.category_dropdown = ctk.CTkComboBox(
-            panel,
-            values=self.fetch_categories(),
-            variable=self.category_var,
-            width=250,height=40, command=self.update_items_dropdown, text_color="#0882c4", fg_color="#cce7f9", border_color="#0C5481",border_width=2,
-            dropdown_fg_color="#cce7f9", dropdown_text_color="#014894", dropdown_font=("Inter", 14), dropdown_hover_color="#8dc0f7", button_color="#0C5481", button_hover_color="#2874ed")
-        self.category_dropdown.grid(row=2, column=0, padx=10, pady=10)
-
-        self.item_var = ctk.StringVar(value="Select Item")
-        self.item_dropdown = ctk.CTkComboBox(
-            panel,
-            values=["Select a Category First"],
-            variable=self.item_var,
-            width=250, height=40, text_color="#0882c4", fg_color="#cce7f9", border_color="#0C5481", border_width=2, dropdown_fg_color="#cce7f9", dropdown_text_color="#014894",
-            dropdown_font=("Inter", 14), dropdown_hover_color="#8dc0f7", button_color="#0C5481", button_hover_color="#2874ed")
-        self.item_dropdown.grid(row=2, column=1, padx=10, pady=10)
-
-        self.quantity_entry = ctk.CTkEntry(
-            panel,
-            text_color="#0C5481", fg_color="#cce7f9", height=40, placeholder_text="Quantity", placeholder_text_color="#0882c4", border_color="#0C5481", width=250)
-        self.quantity_entry.grid(row=2, column=2, padx=10, pady=10)
-        self.quantity_entry.bind("<Return>", lambda event: self.add_to_cart())
 
         button_config = {"width": 300, "height": 50, "fg_color": "#0C5481", "hover_color": "#2874ed", "text_color": "white", "font": ("Arial", 14, "bold")}
         button_panel = ctk.CTkFrame(self.main_frame, fg_color="white")
-        button_panel.grid(row=1, column=1, sticky="n", padx=(10, 5), pady=(360, 5))
+        button_panel.grid(row=1, column=1, sticky="n", padx=(10, 5), pady=(30, 5))
 
-        ctk.CTkButton(button_panel, text="Add to Cart", command=self.add_to_cart, **button_config).pack(pady=(0, 5), fill="x")
-        ctk.CTkButton(button_panel, text="Delete Item", command=self.delete_last_item, **button_config).pack(pady=(0, 5), fill="x")
-        ctk.CTkButton(button_panel, text="Cancel Order", command=self.cancel_order, width=300, height=50, fg_color="red", hover_color="#b01518", text_color="white", font=("Arial", 14, "bold")).pack(pady=(0, 5), fill="x")
-        ctk.CTkButton(button_panel, text="Proceed to Payment", command=self.pay_order, width=300, height=50, fg_color="#5cb85c", hover_color="green", text_color="white", font=("Arial", 14, "bold")).pack(pady=(0, 5), fill="x")
+        # 🔽 Category Dropdown
+        self.category_var = ctk.StringVar(value="Select Category")
+        self.category_dropdown = ctk.CTkComboBox(
+            button_panel,
+            values=self.fetch_categories(),
+            variable=self.category_var,
+            width=300, height=50,
+            command=self.update_items_dropdown,
+            text_color="#0882c4", fg_color="#cce7f9", border_color="#0C5481", border_width=2,
+            dropdown_fg_color="#cce7f9", dropdown_text_color="#014894",
+            dropdown_font=("Inter", 14), dropdown_hover_color="#8dc0f7",
+            button_color="#0C5481", button_hover_color="#2874ed"
+        )
+        self.category_dropdown.pack(padx=10, pady=(5, 20))
+
+        # 🔽 Item Dropdown
+        self.item_var = ctk.StringVar(value="Select Item")
+        self.item_dropdown = ctk.CTkComboBox(
+            button_panel,
+            values=["Select a Category First"],
+            variable=self.item_var,
+            width=300, height=50,
+            text_color="#0882c4", fg_color="#cce7f9", border_color="#0C5481", border_width=2,
+            dropdown_fg_color="#cce7f9", dropdown_text_color="#014894",
+            dropdown_font=("Inter", 14), dropdown_hover_color="#8dc0f7",
+            button_color="#0C5481", button_hover_color="#2874ed"
+        )
+        self.item_dropdown.pack(padx=10, pady=(20, 20))
+
+        # 🔽 Quantity Entry
+        self.quantity_entry = ctk.CTkEntry(
+            button_panel,
+            text_color="#0C5481", fg_color="#cce7f9", height=50,
+            placeholder_text="Quantity", placeholder_text_color="#0882c4",
+            border_color="#0C5481", width=300
+        )
+        self.quantity_entry.pack(padx=10, pady=(20, 20))
+        self.quantity_entry.bind("<Return>", lambda event: self.add_to_cart())
+
+        ctk.CTkButton(button_panel, text="Add to Cart", command=self.add_to_cart, **button_config).pack(pady=(10, 20), fill="x")
+        ctk.CTkButton(button_panel, text="Delete Item", command=self.delete_last_item, **button_config).pack(pady=(0, 20), fill="x")
+        ctk.CTkButton(button_panel, text="Cancel Order", command=self.cancel_order, width=300, height=50, fg_color="red", hover_color="#b01518", text_color="white", font=("Arial", 14, "bold")).pack(pady=(0, 20), fill="x")
+        ctk.CTkButton(button_panel, text="Proceed to Payment", command=self.pay_order, width=300, height=50, fg_color="#5cb85c", hover_color="green", text_color="white", font=("Arial", 14, "bold")).pack(pady=(0, 20), fill="x")
 
         self.cart_table = ctk.CTkFrame(self.main_frame, fg_color="#eaf9ff", corner_radius=10)
         self.main_frame.columnconfigure(0, weight=4)
@@ -110,7 +122,7 @@ class Dashboard:
         style.configure("Treeview.Heading", background="#0C5481", foreground="white", font=("Arial", 15, "bold"), padding=[10, 10])
         style.configure("Treeview", background="#eaf9ff", foreground="#057687", rowheight=30, fieldbackground="#cce7f9", font=("Arial", 14))
 
-        columns = ("Item Name", "Product ID", "Quantity", "Price", "Status")
+        columns = ("Item Name", "Product ID", "Quantity", "Price")
         self.tree = ttk.Treeview(self.cart_table, columns=columns, show="headings", height=45)
         for col in columns:
             self.tree.heading(col, text=col)
@@ -123,7 +135,7 @@ class Dashboard:
 
         self.create_calculator()
         self.refresh_cart_treeview()
-        self.total_label.configure(text=f"Total: RM {self.total_price:.2f}")
+        self.update_total_label()
 
         # ✅ Restore dropdowns and quantity field if values were passed
         if self.selected_category and self.selected_category in self.fetch_categories():
@@ -281,7 +293,7 @@ class Dashboard:
                 self.total_price += quantity_to_add * price
                 self.refresh_cart_treeview()
                 self.update_total_label()
-                self.total_label.configure(text=f"Total: RM {self.total_price:.2f}")
+
 
         except Exception as e:
             messagebox.showerror("Database Error", f"Failed to fetch product details.\n{e}")
@@ -379,12 +391,8 @@ class Dashboard:
         self.dashboard_total_price = total_price
 
     def create_calculator(self):
-        calc_frame = ctk.CTkFrame(self.main_frame, fg_color="#eaf9ff", border_color="#0C5481", border_width=2,
-                                  corner_radius=10)
-        calc_frame.grid(row=1, column=1, sticky="n", padx=10, pady=5)
-
         # Total Display Frame
-        custom_width = 350  # Change to any value you want
+        custom_width = 350
 
         total_frame = ctk.CTkFrame(self.main_frame, fg_color="#eaf9ff", width=custom_width,
                                    border_color="#0C5481", border_width=2, corner_radius=10)
@@ -416,36 +424,9 @@ class Dashboard:
         # Discount Apply Button
         action_frame = ctk.CTkFrame(total_frame, fg_color="#eaf9ff")
         action_frame.pack(pady=(0, 10), padx=10, fill="x")
-        ctk.CTkButton(action_frame, text="Apply Discount", command=self.apply_discount, width=140, fg_color="#0C5481",
-                      hover_color="#2874ed", text_color="white").pack(side="left", padx=5)
+        ctk.CTkButton(action_frame, text="Apply Discount", command=self.apply_discount, width=140,
+                      fg_color="#0C5481", hover_color="#2874ed", text_color="white").pack(side="left", padx=5)
 
-        # Calculator Entry
-        self.calc_entry = ctk.CTkLabel(calc_frame, text="", width=280, height=50, anchor="e", font=("Arial", 18))
-        self.calc_entry.grid(row=0, column=0, columnspan=4, padx=5, pady=5)
-
-        buttons = [
-            ('1', 1, 0), ('2', 1, 1), ('3', 1, 2), ('AC', 1, 3),
-            ('4', 2, 0), ('5', 2, 1), ('6', 2, 2), ('⌫', 2, 3),
-            ('7', 3, 0), ('8', 3, 1), ('9', 3, 2), ('+', 3, 3),
-            ('.', 4, 0), ('0', 4, 1), ('x', 4, 2),
-            ('%', 5, 0), ('/', 5, 1), ('-', 5, 2), ('=', 5, 3)
-        ]
-
-        for key, row, col in buttons:
-            height = 100 if key == '+' else 50
-            rowspan = 2 if key == '+' else 1
-            btn = ctk.CTkButton(
-                calc_frame,
-                text=key, width=60, height=height, fg_color="#cce7f9", border_color="#0C5481", border_width=2,
-                text_color="#0C5481", font=("Arial", 24, "bold"), corner_radius=8,
-                hover_color="#8dc0f7", command=lambda k=key: self.on_calc_button_press(k)
-            )
-            if key == '+':
-                btn.grid(row=row, column=col, rowspan=rowspan, padx=5, pady=5, sticky="ns")
-            else:
-                btn.grid(row=row, column=col, sticky="n", padx=5, pady=(0, 5))
-
-        self.update_total_label()
 
     def apply_discount(self):
         try:
@@ -477,25 +458,6 @@ class Dashboard:
 
     def get_final_total(self):
         return self.final_total
-
-    def on_calc_button_press(self, key):
-        current = self.calc_entry.cget("text")
-        if key == "AC":
-            self.calc_entry.configure(text="")
-        elif key == "⌫":
-            self.calc_entry.configure(text=current[:-1])
-        elif key == "=":
-            try:
-                expression = current.replace("x", "*").replace("%", "/100")
-                result = eval(expression)
-                rounded = round(result, 2)
-                self.calc_entry.configure(text=str(rounded))
-                self.total_price += rounded
-                self.total_label.configure(text=f"Total: RM {self.total_price:.2f}")
-            except:
-                self.calc_entry.configure(text="Error")
-        else:
-            self.calc_entry.configure(text=current + key)
 
     def load_icon(self, filename, size=(30, 30)):
         path = os.path.join("images", filename)
