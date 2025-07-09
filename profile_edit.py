@@ -27,7 +27,7 @@ class EditProfileApp(ctk.CTkFrame):
 
     def create_main_frame(self):
         self.main_frame_width = int(self.screen_width * 0.92)
-        self.main_frame_height = int(self.screen_height * 0.76)
+        self.main_frame_height = int(self.screen_height * 0.85)
         main_frame_x = (self.screen_width - self.main_frame_width) // 2 -30
         main_frame_y = (self.screen_height - self.main_frame_height) // 2 - 35
 
@@ -36,7 +36,7 @@ class EditProfileApp(ctk.CTkFrame):
             width=self.main_frame_width,
             height=self.main_frame_height,
             corner_radius=10,
-            fg_color="#D9D9D9"
+            fg_color="#CEE5FF"
         )
         self.main_frame.place(x=main_frame_x, y=main_frame_y)
 
@@ -48,15 +48,10 @@ class EditProfileApp(ctk.CTkFrame):
 
     def add_labels(self):
         labels = [
-            ("Change Password", 900, 40, 35),
-            ("(optional)", 1200, 50, 25),
             ("Username:", 480, 100, 28),
             ("Email:", 480, 220, 28),
             ("Phone Number:", 480, 340, 28),
             ("Date of Birth:", 480, 460, 28),
-            ("Old Password:", 915, 160, 28),
-            ("New Password:", 915, 280, 28),
-            ("Confirm New Password:", 915, 400, 28),
         ]
 
         for text, x, y, size in labels:
@@ -69,9 +64,7 @@ class EditProfileApp(ctk.CTkFrame):
             ("Username", 480, 140),
             ("Email", 480, 260),
             ("Phone Number", 480, 380),
-            ("Old Password", 915, 200),
-            ("New Password", 915, 320),
-            ("Confirm Password", 915, 440)
+
         ]
         entry_font = ("Inter", 16)
 
@@ -87,6 +80,26 @@ class EditProfileApp(ctk.CTkFrame):
         self.dob_calendar.place(x=600, y=630)
         self.entries["Date of Birth"] = self.dob_calendar  # Store reference to the calendar widget
 
+        self.pw_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent", width=400, height=500)
+        self.pw_frame.place(x=915, y=160)
+        self.pw_frame_visible = False
+        self.pw_frame.place_forget()  # Hide initially
+
+        pw_fields = [
+            ("Old Password", 0),
+            ("New Password", 120),
+            ("Confirm Password", 240)
+        ]
+
+        for label_text, y in pw_fields:
+            label = ctk.CTkLabel(self.pw_frame, text=label_text + ":", font=("Inter", 28), text_color="#000")
+            label.place(x=0, y=y)
+
+            entry = ctk.CTkEntry(self.pw_frame, width=300, height=40, fg_color="#FFFAFA", text_color="#000000",
+                                 font=entry_font, show="*")
+            entry.place(x=0, y=y + 30)
+            self.entries[label_text] = entry
+
     def add_buttons(self):
         button_data = [
             ("Save", 1050, 580, self.save_changes),
@@ -95,16 +108,34 @@ class EditProfileApp(ctk.CTkFrame):
         ]
 
         for text, x, y, cmd in button_data:
-            width = 190 if text == "Change Photo" else 120
-            button = ctk.CTkButton(self.main_frame, text=text, command=cmd, width=width, height=50, font=("Inter",18))
+            width = 190 if text in ["Change Photo"] else 120
+            button = ctk.CTkButton(self.main_frame, text=text, command=cmd, width=width, height=40, font=("Inter", 16))
             button.place(x=x, y=y)
+        # Add this inside the add_buttons() method
+        change_pw_button = ctk.CTkButton(
+            self.main_frame,
+            text="Change Password (optional)",
+            command=self.toggle_password_fields,
+            width=190,
+            height=40,
+            font=("Inter", 18)  # <=== Increase font size here
+        )
+        change_pw_button.place(x=900, y=80)
+
+    def toggle_password_fields(self):
+        if self.pw_frame_visible:
+            self.pw_frame.place_forget()
+            self.pw_frame_visible = False
+        else:
+            self.pw_frame.place(x=915, y=160)
+            self.pw_frame_visible = True
 
     def add_image(self):
         try:
             if hasattr(self, "photo_path") and self.photo_path and os.path.exists(self.photo_path):
                 image_path = self.photo_path
             else:
-                image_path = r"C:\Users\User\Documents\Ruxin file\ALL 2\profile_pic.png"
+                image_path = r"C:\Users\jojol\Desktop\4007 ALL2\profile_pic.png"
 
             img = ctk.CTkImage(Image.open(image_path), size=(200, 200))
             self.image_label = ctk.CTkLabel(self.main_frame, image=img, text="")
