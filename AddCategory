@@ -10,11 +10,13 @@ class AddCategoryWindow(ctk.CTkFrame):
         screen_width = parent.winfo_screenwidth()
         screen_height = parent.winfo_screenheight()
 
-        # Place it near the QR code section
-        x = int(1499 / 1920 * screen_width)
+        # Adjust position to be near the QR image (which is at x ≈ 1499 / 1920 * width)
+        x = int(1499 / 1920 * screen_width)  # You can tweak this 1280 value to shift left/right
         y = int(510 / 974 * screen_height)
 
-        self.configure(width=400, height=500, fg_color="#FFFFFF", corner_radius=0)
+        self.configure(width=400, height=500, fg_color="#FFFFFF")
+        self.configure(corner_radius=0)
+
         self.place(x=x, y=y)
 
         self.category_var = ctk.StringVar()
@@ -25,7 +27,7 @@ class AddCategoryWindow(ctk.CTkFrame):
 
     def create_widgets(self):
         content_frame = ctk.CTkFrame(self, fg_color="transparent")
-        content_frame.pack(expand=True)
+        content_frame.pack(expand=True)  # Center within the main frame
 
         self.label_add = ctk.CTkLabel(content_frame, text="Enter New Category:", font=("Arial", 20))
         self.label_add.pack(pady=(40, 10))
@@ -72,12 +74,8 @@ class AddCategoryWindow(ctk.CTkFrame):
             cursor.execute("INSERT INTO categories (name) VALUES (?)", (new_category,))
             conn.commit()
             messagebox.showinfo("Success", f"Category '{new_category}' added successfully!")
-
-            # ✅ Trigger restore + reset after adding
-            if self.on_close_callback:
-                self.on_close_callback()
-            self.destroy()
-
+            self.category_var.set("")
+            self.load_categories()
         except sqlite3.IntegrityError:
             messagebox.showwarning("Warning", f"Category '{new_category}' already exists.")
         finally:
@@ -89,8 +87,21 @@ class AddCategoryWindow(ctk.CTkFrame):
             messagebox.showwarning("Warning", "Please select a valid category to remove.")
             return
 
-        confirm = messagebox.askyesno("Confirm", f"Are you sure you want to delete category '{category_to_remove}' and all related items?")
+        conn = sqlite3.connect('Trackwise.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT product_id, item_name, quantity FROM inventory WHERE category = ?", (category_to_remove,))
+        items = cursor.fetchall()
+
+        for product_id, name, quantity in items:
+            if quantity > 0:
+                messagebox.showwarning("Warning", f"Cannot delete category. Product '{name}' has remaining stock.")
+                conn.close()
+                return
+
+        confirm = messagebox.askyesno("Confirm",
+                                      f"Are you sure you want to delete category '{category_to_remove}' and all related items?")
         if not confirm:
+            conn.close()
             return
 
         conn = sqlite3.connect('Trackwise.db')
@@ -108,6 +119,6 @@ class AddCategoryWindow(ctk.CTkFrame):
             conn.close()
 
     def go_back(self):
-        if self.on_close_callback:
-            self.on_close_callback()  # This will call create_widgets from parent
         self.destroy()
+        if self.on_close_callback:
+            self.on_close_callback()
