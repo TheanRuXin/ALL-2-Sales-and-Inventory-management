@@ -4,6 +4,15 @@ from PIL import Image
 import os
 import sqlite3
 from payment_window import PaymentFrame
+from tkinter import simpledialog
+import threading
+import platform
+if platform.system() == "Windows":
+    import wmi  # For Windows USB detection
+elif platform.system() == "Linux":
+    import pyudev
+
+
 
 class Dashboard:
     def __init__(self, parent, cashier_username, cart_items=None, total_price=0.0, on_cart_update=None,
@@ -15,6 +24,8 @@ class Dashboard:
         self.cart_items = cart_items if cart_items else []
         self.total_price = total_price
         self.parent = parent
+        self.discount_amount = 0.0
+        self.tax_amount = 0.0
         self.cashier_username = cashier_username
         self.cashier_name = self.get_cashier_name()
         self.parent.rowconfigure(0, weight=1)
@@ -26,7 +37,12 @@ class Dashboard:
         self.main_frame.columnconfigure(0, weight=2)
         self.main_frame.columnconfigure(1, weight=1)
         self.load_dashboard_content()
-
+        self.check_for_usb_device()  # <-- Add this at the end of __init__
+        # QR Entry - Hidden input field for QR scanner input
+        self.qr_entry = ctk.CTkEntry(self.main_frame, width=1, height=1)
+        self.qr_entry.place(x=-100, y=-100)  # Hidden offscreen
+        self.qr_entry.bind("<Return>", self.handle_qr_scan)
+        self.qr_entry.focus_set()  # Autofocus so scanner input goes here
 
     def get_cashier_name(self):
         try:
@@ -78,12 +94,12 @@ class Dashboard:
 
         button_config = {"width": 300, "height": 50, "fg_color": "#0C5481", "hover_color": "#2874ed", "text_color": "white", "font": ("Arial", 14, "bold")}
         button_panel = ctk.CTkFrame(self.main_frame, fg_color="white")
-        button_panel.grid(row=1, column=1, sticky="n", padx=(10, 10), pady=(380, 10))
+        button_panel.grid(row=1, column=1, sticky="n", padx=(10, 5), pady=(360, 5))
 
-        ctk.CTkButton(button_panel, text="Add to Cart", command=self.add_to_cart, **button_config).pack(pady=(0, 10), fill="x")
-        ctk.CTkButton(button_panel, text="Delete Item", command=self.delete_last_item, **button_config).pack(pady=(0, 10), fill="x")
-        ctk.CTkButton(button_panel, text="Cancel Order", command=self.cancel_order, width=300, height=50, fg_color="red", hover_color="#b01518", text_color="white", font=("Arial", 14, "bold")).pack(pady=(0, 10), fill="x")
-        ctk.CTkButton(button_panel, text="Proceed to Payment", command=self.pay_order, width=300, height=50, fg_color="#5cb85c", hover_color="green", text_color="white", font=("Arial", 14, "bold")).pack(pady=(0, 10), fill="x")
+        ctk.CTkButton(button_panel, text="Add to Cart", command=self.add_to_cart, **button_config).pack(pady=(0, 5), fill="x")
+        ctk.CTkButton(button_panel, text="Delete Item", command=self.delete_last_item, **button_config).pack(pady=(0, 5), fill="x")
+        ctk.CTkButton(button_panel, text="Cancel Order", command=self.cancel_order, width=300, height=50, fg_color="red", hover_color="#b01518", text_color="white", font=("Arial", 14, "bold")).pack(pady=(0, 5), fill="x")
+        ctk.CTkButton(button_panel, text="Proceed to Payment", command=self.pay_order, width=300, height=50, fg_color="#5cb85c", hover_color="green", text_color="white", font=("Arial", 14, "bold")).pack(pady=(0, 5), fill="x")
 
         self.cart_table = ctk.CTkFrame(self.main_frame, fg_color="#eaf9ff", corner_radius=10)
         self.main_frame.columnconfigure(0, weight=4)
@@ -142,58 +158,133 @@ class Dashboard:
         items = self.fetch_items_by_category(self.category_var.get())
         self.item_dropdown.configure(values=items)
 
+    def check_for_usb_device(self):
+        def usb_check():
+            if platform.system() == "Windows":
+                c = wmi.WMI()
+                for usb in c.Win32_USBControllerDevice():
+                    if "iPhone" in str(usb.Dependent):
+                        self.prompt_qr_device()
+                        break
+            elif platform.system() == "Linux":
+                context = pyudev.Context()
+                monitor = pyudev.Monitor.from_netlink(context)
+                for device in iter(monitor.poll, None):
+                    if device.get("ID_MODEL") and "iPhone" in device.get("ID_MODEL"):
+                        self.prompt_qr_device()
+                        break
+
+        threading.Thread(target=usb_check, daemon=True).start()
+
+    def prompt_qr_device(self):
+        result = messagebox.askyesno("QR Device Detected", "iPhone connected. Use this device for QR scanning?")
+        if result:
+            self.qr_entry.focus_set()
+
     def add_to_cart(self):
         item = self.item_var.get()
         qty_text = self.quantity_entry.get()
 
+        # Basic input validation
         if item in ("Select Item", "Select a Category First") or not qty_text.isdigit():
             messagebox.showwarning("Input Error", "Select a valid item and enter quantity.")
             return
 
         requested_qty = int(qty_text)
 
-        with sqlite3.connect('Trackwise.db') as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT product_id, price, status, quantity FROM inventory WHERE item_name = ?", (item,))
-            result = cursor.fetchone()
+        try:
+            with sqlite3.connect('Trackwise.db') as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT product_id, price, status, quantity 
+                    FROM inventory 
+                    WHERE LOWER(TRIM(item_name)) = ?
+                """, (item.strip().lower(),))
+                result = cursor.fetchone()
+        except Exception as e:
+            messagebox.showerror("Database Error", f"Failed to fetch item details.\n{e}")
+            return
 
-        if result:
-            prod_id, price, status, available_stock = result
+        if not result:
+            messagebox.showerror("Item Error", f"No matching item found for '{item}'.")
+            return
 
-            # Calculate current quantity in cart for this item
-            cart_qty = 0
-            for name, _, qty, _, _ in self.cart_items:
-                if name == item:
-                    cart_qty = qty
-                    break
+        prod_id, price, status, available_stock = result
 
-            if cart_qty + requested_qty > available_stock:
-                messagebox.showwarning("Stock Limit",
-                                       f"Only {available_stock - cart_qty} more units available for '{item}'.")
-                return
+        try:
+            price = float(price)
+        except:
+            messagebox.showerror("Data Error", f"Invalid price for item '{item}'.")
+            return
 
-            # Check if item is already in the cart
-            for i, (name, pid, qty, price, status) in enumerate(self.cart_items):
-                if name == item:
-                    self.cart_items[i] = (name, pid, qty + requested_qty, price, status)
-                    self.total_price += requested_qty * price
-                    self.refresh_cart_treeview()
-                    self.total_label.configure(text=f"Total: RM {self.total_price:.2f}")
-                    self.quantity_entry.delete(0, 'end')
+        cart_qty = sum(qty for name, _, qty, _, _ in self.cart_items if name == item)
 
-                    if self.on_cart_update:
-                        self.on_cart_update(self.cart_items, self.total_price)
+        if cart_qty + requested_qty > available_stock:
+            messagebox.showwarning("Stock Limit",
+                                   f"Only {available_stock - cart_qty} more units available for '{item}'.")
+            return
+
+        for i, (name, pid, qty, price_in_cart, item_status) in enumerate(self.cart_items):
+            if name == item:
+                self.cart_items[i] = (name, pid, qty + requested_qty, price, item_status)
+                break
+        else:
+            self.cart_items.append((item, prod_id, requested_qty, price, status))
+
+        self.total_price += requested_qty * price
+        self.refresh_cart_treeview()
+        self.total_label.configure(text=f"Total: RM {self.total_price:.2f}")
+        self.quantity_entry.delete(0, 'end')
+
+        self.update_total_label()
+
+        if self.on_cart_update:
+            self.on_cart_update(self.cart_items, self.total_price)
+
+    def handle_qr_scan(self, event):
+        scanned_product_id = self.qr_entry.get().strip()
+        self.qr_entry.delete(0, 'end')
+
+        if not scanned_product_id:
+            messagebox.showwarning("QR Scan", "Scanned data is empty.")
+            return
+
+        try:
+            with sqlite3.connect('Trackwise.db') as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT item_name, product_id, quantity, price, status 
+                    FROM inventory 
+                    WHERE product_id = ?
+                """, (scanned_product_id,))
+                result = cursor.fetchone()
+
+                if not result:
+                    messagebox.showerror("QR Scan", f"No product found with ID {scanned_product_id}.")
                     return
 
-            # Add new item
-            self.cart_items.append((item, prod_id, requested_qty, price, status))
-            self.total_price += requested_qty * price
-            self.refresh_cart_treeview()
-            self.total_label.configure(text=f"Total: RM {self.total_price:.2f}")
-            self.quantity_entry.delete(0, 'end')
+                name, pid, stock_qty, price, status = result
+                quantity_to_add = 1
+                cart_qty = sum(qty for n, _, qty, _, _ in self.cart_items if n == name)
 
-            if self.on_cart_update:
-                self.on_cart_update(self.cart_items, self.total_price)
+                if cart_qty + quantity_to_add > stock_qty:
+                    messagebox.showwarning("Stock Limit", f"Only {stock_qty - cart_qty} units available.")
+                    return
+
+                for i, (n, pid_, qty, price_, st) in enumerate(self.cart_items):
+                    if n == name:
+                        self.cart_items[i] = (n, pid_, qty + quantity_to_add, price, st)
+                        break
+                else:
+                    self.cart_items.append((name, pid, quantity_to_add, price, status))
+
+                self.total_price += quantity_to_add * price
+                self.refresh_cart_treeview()
+                self.update_total_label()
+                self.total_label.configure(text=f"Total: RM {self.total_price:.2f}")
+
+        except Exception as e:
+            messagebox.showerror("Database Error", f"Failed to fetch product details.\n{e}")
 
     def refresh_cart_treeview(self):
         self.tree.delete(*self.tree.get_children())
@@ -208,10 +299,15 @@ class Dashboard:
 
         last_item = self.cart_items.pop()
         self.total_price -= last_item[3] * last_item[2]  # price * qty
+
         children = self.tree.get_children()
         if children:
             self.tree.delete(children[-1])
+
         self.total_label.configure(text=f"Total: RM {self.total_price:.2f}")
+
+        #  Refresh Net, Tax, Discount, Total
+        self.update_total_label()
 
         if self.on_cart_update:
             self.on_cart_update(self.cart_items, self.total_price)
@@ -228,6 +324,8 @@ class Dashboard:
         self.calc_entry.configure(text="")
         self.quantity_entry.delete(0, 'end')
 
+        self.update_total_label()  # <-- 🆕 Refresh net, tax, total
+
         if self.on_cart_update:
             self.on_cart_update(self.cart_items, self.total_price)
 
@@ -235,9 +333,28 @@ class Dashboard:
         if not self.cart_items:
             messagebox.showwarning("Payment", "Cart is empty.")
             return
+
+        # Recalculate the total before passing
+        self.update_total_label()
+
+        # Extract values
+        final_total = self.get_final_total()
+        tax = self.tax_amount
+        discount = self.discount_amount
+
+        # Destroy current frame
         for widget in self.main_frame.winfo_children():
             widget.destroy()
-        PaymentFrame(parent=self.main_frame, total_amount=self.total_price, cart_items=self.cart_items.copy(), on_payment_complete=self.clear_cart_and_reload, on_cancel=lambda: self.reload_dashboard_content(keep_cart=True)).pack(fill="both", expand=True)
+
+        PaymentFrame(
+            parent=self.main_frame,
+            total_amount=self.total_price,  # ✅ Net subtotal before tax and discount
+            cart_items=self.cart_items.copy(),
+            tax_amount=self.tax_amount,  # ✅ Properly calculated tax
+            discount_amount=self.discount_amount,  # ✅ Properly calculated discount
+            on_payment_complete=self.clear_cart_and_reload,
+            on_cancel=lambda: self.reload_dashboard_content(keep_cart=True)
+        ).pack(fill="both", expand=True)
 
     def reload_dashboard_content(self, keep_cart=False):
         # Preserve cart and total only if keep_cart is True
@@ -254,6 +371,7 @@ class Dashboard:
     def clear_cart_and_reload(self):
         self.cart_items.clear()
         self.total_price = 0.0
+        self.update_total_label()  # <-- 🆕 Ensure values reset before reload
         self.reload_dashboard_content()
 
     def update_dashboard_cart(self, cart_items, total_price):
@@ -261,17 +379,47 @@ class Dashboard:
         self.dashboard_total_price = total_price
 
     def create_calculator(self):
-        calc_frame = ctk.CTkFrame(self.main_frame, fg_color="#eaf9ff", border_color="#0C5481", border_width=2, corner_radius=10)
-        calc_frame.grid(row=1, column=1, sticky="n", padx=10, pady=20)
+        calc_frame = ctk.CTkFrame(self.main_frame, fg_color="#eaf9ff", border_color="#0C5481", border_width=2,
+                                  corner_radius=10)
+        calc_frame.grid(row=1, column=1, sticky="n", padx=10, pady=5)
 
-        # Total Display Frame (adjusted)
-        total_frame = ctk.CTkFrame(self.main_frame, fg_color="#eaf9ff", border_color="#0C5481", border_width=2, corner_radius=10)
-        total_frame.grid(row=0, column=1, sticky="n", padx=10, pady=(30, 10), ipadx=10, ipady=10)
+        # Total Display Frame
+        custom_width = 350  # Change to any value you want
 
-        # Total Label inside Frame
-        self.total_label = ctk.CTkLabel(total_frame, text="Total: RM 0.00", fg_color="#eaf9ff", text_color="#0C5481", font=("Arial", 20, "bold"), corner_radius=8, width=260, height=80, justify="center")
-        self.total_label.pack(padx=10, pady=10)
+        total_frame = ctk.CTkFrame(self.main_frame, fg_color="#eaf9ff", width=custom_width,
+                                   border_color="#0C5481", border_width=2, corner_radius=10)
+        total_frame.grid(row=0, column=1, sticky="n", padx=10, pady=(10, 10), ipadx=10, ipady=5)
 
+        # Net Label (Subtotal)
+        self.net_label = ctk.CTkLabel(total_frame, text="Net: RM 0.00", font=("Arial", 14), text_color="#0C5481",
+                                      anchor="w")
+        self.net_label.pack(pady=(5, 0), padx=10, fill="x")
+
+        # Tax Label (6% Auto)
+        self.tax_label = ctk.CTkLabel(total_frame, text="Tax: RM 0.00", font=("Arial", 14), text_color="#0C5481",
+                                      anchor="w")
+        self.tax_label.pack(pady=(5, 0), padx=10, fill="x")
+
+        # Discount Entry
+        discount_frame = ctk.CTkFrame(total_frame, fg_color="#eaf9ff")
+        discount_frame.pack(pady=(5, 0), padx=10, fill="x")
+        ctk.CTkLabel(discount_frame, text="Discount:", font=("Arial", 14), text_color="#0C5481", width=140,
+                     anchor="w").pack(side="left")
+        self.discount_entry = ctk.CTkEntry(discount_frame, placeholder_text="Enter Discount %", width=110)
+        self.discount_entry.pack(side="left", padx=5)
+
+        # Total Label (Net + Tax - Discount)
+        self.total_label = ctk.CTkLabel(total_frame, text="Total: RM 0.00", font=("Arial", 14, "bold"),
+                                        text_color="#0C5481", anchor="w")
+        self.total_label.pack(pady=(5, 10), padx=10, fill="x")
+
+        # Discount Apply Button
+        action_frame = ctk.CTkFrame(total_frame, fg_color="#eaf9ff")
+        action_frame.pack(pady=(0, 10), padx=10, fill="x")
+        ctk.CTkButton(action_frame, text="Apply Discount", command=self.apply_discount, width=140, fg_color="#0C5481",
+                      hover_color="#2874ed", text_color="white").pack(side="left", padx=5)
+
+        # Calculator Entry
         self.calc_entry = ctk.CTkLabel(calc_frame, text="", width=280, height=50, anchor="e", font=("Arial", 18))
         self.calc_entry.grid(row=0, column=0, columnspan=4, padx=5, pady=5)
 
@@ -288,12 +436,47 @@ class Dashboard:
             rowspan = 2 if key == '+' else 1
             btn = ctk.CTkButton(
                 calc_frame,
-                text=key, width=60, height=height, fg_color="#cce7f9", border_color="#0C5481",border_width=2, text_color="#0C5481",
-                font=("Arial", 24, "bold"), corner_radius=8, hover_color="#8dc0f7", command=lambda k=key: self.on_calc_button_press(k))
+                text=key, width=60, height=height, fg_color="#cce7f9", border_color="#0C5481", border_width=2,
+                text_color="#0C5481", font=("Arial", 24, "bold"), corner_radius=8,
+                hover_color="#8dc0f7", command=lambda k=key: self.on_calc_button_press(k)
+            )
             if key == '+':
                 btn.grid(row=row, column=col, rowspan=rowspan, padx=5, pady=5, sticky="ns")
             else:
                 btn.grid(row=row, column=col, sticky="n", padx=5, pady=(0, 5))
+
+        self.update_total_label()
+
+    def apply_discount(self):
+        try:
+            self.discount_amount = float(self.discount_entry.get()) if self.discount_entry.get() else 0.0
+        except:
+            self.discount_amount = 0.0
+
+        self.update_total_label()  # Recalculate total using current discount
+
+    def apply_tax(self):
+        self.tax_amount = self.total_price * 0.06
+        self.update_total_label()
+
+    def update_total_label(self):
+        try:
+            discount_percent = float(self.discount_entry.get()) if self.discount_entry.get() else 0.0
+        except:
+            discount_percent = 0.0
+
+        net_total = self.total_price
+        self.tax_amount = round(net_total * 6 / 106, 2)  # ✅ Extract 6% from tax-inclusive prices
+        self.discount_amount = round((discount_percent / 100) * net_total, 2)
+
+        self.final_total = round(net_total - self.discount_amount, 2)  # ✅ No extra tax added
+
+        self.net_label.configure(text=f"Net: RM {net_total - self.tax_amount:.2f}")
+        self.tax_label.configure(text=f"Tax (included): RM {self.tax_amount:.2f}")
+        self.total_label.configure(text=f"Total: RM {self.final_total:.2f}")
+
+    def get_final_total(self):
+        return self.final_total
 
     def on_calc_button_press(self, key):
         current = self.calc_entry.cget("text")
@@ -318,6 +501,9 @@ class Dashboard:
         path = os.path.join("images", filename)
         return ctk.CTkImage(Image.open(path), size=size) if os.path.exists(path) else None
 
+
+
 def load_dashboard_content(parent, cashier_username, cart_items=None, total_price=0.0, on_cart_update=None):
     return Dashboard(parent, cashier_username, cart_items, total_price, on_cart_update)
+
 
