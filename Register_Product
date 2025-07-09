@@ -24,6 +24,7 @@ class RegisterProductPage(ctk.CTkFrame):
     def __init__(self,parent,controller):
         super().__init__(parent)
         self.controller = controller
+        self.product_image_path = None
 
         self.width, self.height = 1574, 800
 
@@ -129,7 +130,6 @@ class RegisterProductPage(ctk.CTkFrame):
                                        textvariable=self.price)
         self.price_entry.place(x=(935 / 1920 * self.width)-50, y=255 / 974 * self.height)
 
-        #Status
         self.status_text = ctk.CTkLabel(self, text="Status:",
                                         font=("Arial", 23),
                                         bg_color="#FFFFFF", fg_color="#FFFFFF",
@@ -279,6 +279,7 @@ class RegisterProductPage(ctk.CTkFrame):
                 messagebox.showerror("Invalid Quantity", "Quantity must be between 1 and 144.\n"
                                                          "Example: 5 or 120")
                 return
+            status = "Low Stock" if quantity < 5 else "In Stock"
         except ValueError:
             messagebox.showerror("Invalid Quantity", "Quantity must be a whole number.\n"
                                                      "Example: 5 or 120")
@@ -338,7 +339,12 @@ class RegisterProductPage(ctk.CTkFrame):
         self.category.set("")
         self.quantity.set("")
         self.price.set("")
-        self.status.set("")
+        self.status_label.configure(text="")
+        self.product_image_path = None
+        self.product_image_preview.configure(image=None, text="Product Image")
+        self.product_image_preview.image = None
+        self.qr_label.configure(image=None, text="QR Code")
+        self.qr_label.image = None
 
     def upload_product_image(self):
         file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.png;*.jpg;*.jpeg")])
@@ -386,8 +392,11 @@ class RegisterProductPage(ctk.CTkFrame):
         self.category.set("")
         self.quantity.set("")
         self.price.set("")
-        self.status.set("")
+        self.status_label.configure(text="In Stock")
         self.date.set(datetime.now().strftime("%d-%m-%Y"))
         self.product_image_path = None
         self.product_image_preview.configure(image=None, text="Product Image")
+        self.product_image_preview.image = None
+
         self.qr_label.configure(image=None, text="QR Code")
+        self.qr_label.image = None
