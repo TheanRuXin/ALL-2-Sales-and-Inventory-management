@@ -19,7 +19,7 @@ class InventoryReport(ctk.CTkFrame):
         self.width, self.height = 1574, 800
 
         # Load background image
-        self.original_bg_image = Image.open(r"C:\Users\User\Documents\Ruxin file\ALL 2\View sales history.png")
+        self.original_bg_image = Image.open(r"C:\Users\jojol\Desktop\4007 ALL2\inventory_report_bg.png")
         self.bg_photo = CTkImage(light_image=self.original_bg_image, size=(self.width, self.height))
 
         self.bg_label = ctk.CTkLabel(self, text="", image=self.bg_photo)
@@ -29,6 +29,8 @@ class InventoryReport(ctk.CTkFrame):
         self.frame.place(relx=0.45, rely=0.78, anchor="s")
 
         self.create_widgets()
+        self.blink_state = False
+        self.start_blinking()
 
     def create_widgets(self):
         # Control variables
@@ -90,8 +92,18 @@ class InventoryReport(ctk.CTkFrame):
         self.tree.place(x=120, y=340)
         scrollbar.place(x=1750, y=390, height=330)
 
-        self.tree.tag_configure('low_stock', foreground='orange')
-        self.tree.tag_configure('out_stock', foreground='red')
+        self.tree.tag_configure('low_stock', foreground='black')
+        self.tree.tag_configure('out_stock', foreground='black')
+
+    def start_blinking(self):
+        # Toggle background for blinking effect
+        bg_color = '#FF6666' if self.blink_state else 'white'
+
+        self.tree.tag_configure('low_stock', background=bg_color, foreground='black')
+        self.tree.tag_configure('out_stock', background=bg_color, foreground='black')
+
+        self.blink_state = not self.blink_state
+        self.after(500, self.start_blinking)
 
     def fetch_categories(self):
         conn = sqlite3.connect("Trackwise.db")
@@ -236,7 +248,7 @@ class InventoryReport(ctk.CTkFrame):
         for i, row in enumerate(rows, start=1):  # start=1 because 0 is header
             status = row[-1]
             if status == "Low":
-                style.add('TEXTCOLOR', (0, i), (-1, i), colors.orange)
+                style.add('TEXTCOLOR', (0, i), (-1, i), colors.red)
             elif status == "Out of Stock":
                 style.add('TEXTCOLOR', (0, i), (-1, i), colors.red)
 
