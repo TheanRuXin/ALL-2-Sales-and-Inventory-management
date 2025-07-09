@@ -3,82 +3,334 @@ from tkinter import messagebox
 import sqlite3
 from datetime import datetime
 import tempfile
-from PIL import Image, ImageTk
-import io
 import os
 
+
 class PaymentFrame(ctk.CTkFrame):
-    def __init__(self, parent, total_amount, cart_items, on_payment_complete, on_cancel):
+    def __init__(self, parent, total_amount, cart_items, on_payment_complete, on_cancel, discount_amount=0.0, tax_amount=0.0):
         super().__init__(parent, fg_color="white")
-        self.total_amount = total_amount
+
         self.cart_items = cart_items
         self.on_payment_complete = on_payment_complete
         self.on_cancel = on_cancel
         self.last_invoice = None
         self.last_payment_method = None
         self.last_receipt_text = ""
+        self.discount_amount = discount_amount
+        self.tax_amount = tax_amount
+        self.original_total = total_amount
+        self.net_total = round(total_amount, 2)
+        self.total_amount = round(self.net_total + self.tax_amount - self.discount_amount, 2)
 
-        self.grid_columnconfigure(0, weight=0)
-        self.grid_columnconfigure(1, weight=2)
+        self.ensure_sales_table_exists()
 
-        # Left side: receipt display
-        self.receipt_frame = ctk.CTkFrame(self, fg_color="#f8f9fa", border_width=2, border_color="#0C5481", width=410)
-        self.receipt_frame.grid(row=0, column=0, sticky="ns", padx=10, pady=10)
+        self.grid_columnconfigure((0, 1, 2), weight=1)
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=0)
 
-        self.receipt_box = ctk.CTkTextbox(self.receipt_frame, font=("Courier", 11), wrap="none", width=380)
-        self.receipt_box.pack(padx=10, pady=(10, 0), fill="both", expand=True)
+        # --- Receipt Section (Left Panel) ---
+        self.receipt_frame = ctk.CTkFrame(
+            self,
+            fg_color="transparent",
+            border_width=2,
+            border_color="#0C5481",
+            width=400,
+            height=600
+        )
+        self.receipt_frame.grid(row=0, column=0, sticky="nsew", padx=30, pady=10)
+        self.receipt_frame.grid_propagate(False)
+
+        # --- Inner Container for padding and layout ---
+        receipt_inner = ctk.CTkFrame(self.receipt_frame, fg_color="#f8f9fa")
+        receipt_inner.pack(fill="both", expand=True, padx=5, pady=5)
+
+        # --- Frame for Receipt Textbox and Scrollbar ---
+        receipt_text_frame = ctk.CTkFrame(receipt_inner, fg_color="#f8f9fa")
+        receipt_text_frame.pack(fill="both", expand=True, padx=10, pady=(20, 5))
+
+        # --- Textbox ---
+        self.receipt_box = ctk.CTkTextbox(
+            receipt_text_frame,
+            font=("Courier", 13),
+            fg_color="white",
+            text_color="black",
+            border_width=1,
+            border_color="#ccc"
+        )
+        self.receipt_box.pack(side="left", fill="both", expand=True)
+
+        # --- Scrollbar ---
+        self.receipt_scroll_y = ctk.CTkScrollbar(
+            receipt_text_frame,
+            orientation="vertical",
+            command=self.receipt_box.yview,
+            fg_color="#e9ecef",
+            button_color= "#0C5481",
+            button_hover_color="#0394fc"
+        )
+        self.receipt_scroll_y.pack(side="right", fill="y")
+        self.receipt_box.configure(yscrollcommand=self.receipt_scroll_y.set)
+
+        # --- Receipt Button Frame (Print & Done) ---
+        self.receipt_button_frame = ctk.CTkFrame(receipt_inner, fg_color="#0C5481")
+        self.receipt_button_frame.pack(fill="x", padx=10, pady=(0, 10))
+
+        self.print_btn = ctk.CTkButton(
+            self.receipt_button_frame,
+            text="\U0001F5A8 Print Receipt",
+            command=self.print_receipt,
+            fg_color="#5cb85c",
+            hover_color="#4cae4c",
+            text_color="white",
+            font=("Arial", 13, "bold"),
+            width=120
+        )
+        self.print_btn.pack(side="left", padx=20, pady=5)
+
+        self.done_btn = ctk.CTkButton(
+            self.receipt_button_frame,
+            text="✓ Done",
+            command=self.on_payment_complete,
+            fg_color="#0275d8",
+            hover_color="#025aa5",
+            text_color="white",
+            font=("Arial", 13, "bold"),
+            width=120
+        )
+        self.done_btn.pack(side="right", padx=20, pady=5)
+
+        # Insert default receipt message
         self.receipt_box.insert("1.0", "\n\n\n\n\n\n\n\n\n\n     Receipt will appear here after payment.")
         self.receipt_box.configure(state="disabled")
 
-        # Scrollbars
-        self.receipt_scroll_y = ctk.CTkScrollbar(self.receipt_frame, orientation="vertical", command=self.receipt_box.yview, fg_color="#0C5481")
-        self.receipt_scroll_y.place(relx=1.0, rely=0, relheight=0.92, anchor="ne")
-
-
-        self.receipt_box.configure(yscrollcommand=self.receipt_scroll_y.set)
-
-        self.receipt_button_frame = ctk.CTkFrame(self.receipt_frame,  fg_color="#0C5481")
-        self.receipt_button_frame.pack(fill="x", pady=5)
-
-        self.print_btn = ctk.CTkButton(self.receipt_button_frame, text="🖨️ Print Receipt", command=self.print_receipt,
-                                       fg_color="#5cb85c", hover_color="#4cae4c",
-                                       text_color="white", font=("Arial", 13, "bold"), width=120)
-        self.print_btn.pack(side="left", padx=20, pady=5)
-
-        self.done_btn = ctk.CTkButton(self.receipt_button_frame, text="✓ Done", command=self.on_payment_complete,
-                                      fg_color="#0275d8", hover_color="#025aa5",
-                                      text_color="white", font=("Arial", 13, "bold"), width=120)
-        self.done_btn.pack(side="right", padx=20, pady=5)
-
-        # Right side: payment options
+        # Payment Options (Middle)
         self.options_frame = ctk.CTkFrame(self, fg_color="white")
         self.options_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
 
-        ctk.CTkLabel(self.options_frame, text="Payment Options", font=("Arial", 24, "bold"), text_color="#0C5481").pack(pady=(30, 10))
-        ctk.CTkLabel(self.options_frame, text=f"Total Amount: RM {self.total_amount:.2f}", font=("Arial", 18, "bold")).pack(pady=(0, 5))
-        total_quantity = sum(q for _, _, q, _, _ in self.cart_items)
-        ctk.CTkLabel(self.options_frame, text=f"Total Quantity: {total_quantity}", font=("Arial", 16)).pack(pady=(0, 10))
+        ctk.CTkLabel(self.options_frame, text="Payment Options", font=("Arial", 24, "bold"), text_color="#0C5481").pack(
+            pady=(30, 10))
 
+        # 1. BUTTONS FIRST
         self.button_frame = ctk.CTkFrame(self.options_frame, fg_color="white")
         self.button_frame.pack(pady=10)
 
         buttons = [
-            ("💵  Cash", self.pay_cash),
-            ("🏧  Debit Card", lambda: self.confirm_payment("Debit Card")),
-            ("💳  Credit Card", lambda: self.confirm_payment("Credit Card")),
-            ("🪪  MyKasih", lambda: self.confirm_payment("MyKasih")),
-            ("📱  TNG eWallet", lambda: self.confirm_payment("TNG eWallet")),
-            ("📷  DuitNow QR", lambda: self.confirm_payment("DuitNow QR")),
+            ("\U0001F4B5  Cash", self.pay_cash),
+            ("\U0001F3E7  Debit Card", self.open_debit_card_window),
+            ("\U0001F4F7  DuitNow QR", lambda: self.confirm_payment("DuitNow QR")),
         ]
 
-        for name, command in buttons:
-            ctk.CTkButton(self.button_frame, text=name, command=command, width=240, height=40,
-                          fg_color="#0C5481", hover_color="#2874ed", text_color="white",
-                          font=("Arial", 14, "bold")).pack(pady=5)
+        self.payment_buttons = []  # Store all references here
 
-        ctk.CTkButton(self.options_frame, text="← Back to Dashboard", command=self.on_cancel,
-                      fg_color="#d9534f", hover_color="#c9302c", text_color="white",
-                      font=("Arial", 14, "bold")).pack(pady=20)
+        for name, command in buttons:
+            btn = ctk.CTkButton(
+                self.button_frame,
+                text=name,
+                command=command,
+                width=450,
+                height=80,
+                fg_color="#0C5481",
+                hover_color="#2874ed",
+                text_color="white",
+                font=("Arial", 14, "bold")
+            )
+            btn.pack(pady=15)
+
+            self.payment_buttons.append(btn)  # Store button
+
+        # Cash Input Frame (Enlarged & Refined)
+        self.cash_input_frame = ctk.CTkFrame(
+            self.options_frame,
+            fg_color="#f1f1f1",
+            border_width=2,
+            border_color="#0C5481",
+            width=450,
+            height=320  # Increased height
+        )
+        self.cash_input_frame.pack(pady=10)
+        self.cash_input_frame.pack_propagate(False)
+
+        # Cash Title
+        ctk.CTkLabel(
+            self.cash_input_frame,
+            text="💵 Cash Payment",
+            font=("Arial", 20, "bold"),
+            text_color="#0C5481"
+        ).pack(pady=(10, 5))
+
+        # Cash Entry
+        self.cash_entry = ctk.CTkEntry(
+            self.cash_input_frame,
+            placeholder_text="Enter cash amount",
+            font=("Arial", 16),
+            width=290,
+            height=60,
+            justify="center"
+        )
+        self.cash_entry.pack(pady=5)
+
+        # Quick Cash Buttons (Organized with better spacing)
+        self.cash_button_frame = ctk.CTkFrame(self.cash_input_frame, fg_color="#f1f1f1")
+        self.cash_button_frame.pack(pady=10)
+
+        cash_values = [10, 20, 30, 40, 50, 100]
+        for index, val in enumerate(cash_values):
+            row = 0 if index < 3 else 1
+            col = index % 3
+            btn = ctk.CTkButton(
+                self.cash_button_frame,
+                text=f"RM {val}",
+                width=120,
+                height=80,
+                fg_color="#0C5481",
+                hover_color="#2874ed",
+                text_color="white",
+                font=("Arial", 14, "bold"),
+                command=lambda v=val: self.add_cash_value(v)
+            )
+            btn.grid(row=row, column=col, padx=6, pady=6)
+
+        # Right Side Panel (Calculator + Cash Input)
+        self.right_panel = ctk.CTkFrame(self, fg_color="white")
+        self.right_panel.grid(row=0, column=2, sticky="nsew", padx=10, pady=10)
+
+        # Back Button at the top
+        self.back_btn = ctk.CTkButton(
+            self.right_panel, text="← Back to Dashboard", command=self.on_cancel,
+            fg_color="#d9534f", hover_color="#c9302c", text_color="white",
+            font=("Arial", 14, "bold"), width=220, height=40
+        )
+        self.back_btn.pack(pady=(0, 20))
+
+        self.calc_frame = ctk.CTkFrame(
+            self.right_panel,
+            fg_color="#f8f9fa",
+            border_width=2,
+            border_color="#0C5481",
+            width=360,
+            height=330
+        )
+        self.calc_frame.pack(padx=10, pady=(0, 0))  # Removed top padding
+        self.calc_frame.pack_propagate(False)
+
+
+
+
+        # Calculator Buttons Grid
+        buttons = [
+            ('1', 2, 0), ('2', 2, 1), ('3', 2, 2), ('AC', 2, 3),
+            ('4', 3, 0), ('5', 3, 1), ('6', 3, 2), ('⌫', 3, 3),
+            ('7', 4, 0), ('8', 4, 1), ('9', 4, 2), ('+', 4, 3),
+            ('.', 5, 0), ('0', 5, 1), ('x', 5, 2),
+            ('%', 6, 0), ('/', 6, 1), ('-', 6, 2), ('=', 6, 3)
+        ]
+
+        for key, row, col in buttons:
+            height = 100 if key == '+' else 50
+            rowspan = 2 if key == '+' else 1
+
+            btn = ctk.CTkButton(
+                self.calc_frame,
+                text=key,
+                width=90,
+                height=70,
+                fg_color="#cce7f9",
+                border_color="#0C5481",
+                border_width=2,
+                text_color="#0C5481",
+                font=("Arial", 24, "bold"),
+                corner_radius=8,
+                hover_color="#8dc0f7",
+                command=lambda k=key: self.on_calc_button_press(k)
+            )
+
+            if key == '+':
+                btn.grid(row=row, column=col, rowspan=rowspan, padx=5, pady=5, sticky="ns")
+            else:
+                btn.grid(row=row, column=col, padx=5, pady=5, sticky="n")
+
+        self.total_summary_frame = ctk.CTkFrame(
+            self.right_panel,
+            fg_color="#f8f9fa",
+            border_color="#0C5481",
+            border_width=2,
+            width=400,
+            height=280  # ✅ Set desired height
+        )
+        self.total_summary_frame.pack(side="bottom", padx=10, pady=(10, 15))
+        self.total_summary_frame.pack_propagate(False)  # ✅ Important to lock height
+
+        # Helper function to create rows
+        def add_row(label, value, bold=False, color=None):
+            font_style = ("Arial", 24, "bold") if bold else ("Arial", 24)
+            text_color = color if color else "#0C5481"
+
+            row_frame = ctk.CTkFrame(self.total_summary_frame, fg_color="#f8f9fa")
+            row_frame.pack(fill="x", pady=10, padx=5)
+
+            ctk.CTkLabel(row_frame, text=label, font=font_style, text_color=text_color).pack(side="left", padx=(10, 0))
+            ctk.CTkLabel(row_frame, text=value, font=font_style, text_color=text_color).pack(side="right", padx=(0, 10))
+
+        # Data rows
+        add_row("Net:", f"RM {self.original_total:.2f}")
+        add_row("Discount:", f"-RM {self.discount_amount:.2f}", color="red")
+        add_row("Service Tax (6%):", f"+RM {self.tax_amount:.2f}")
+        add_row("Total Payable:", f"RM {self.total_amount:.2f}", bold=True)
+        total_quantity = sum(q for _, _, q, _, _ in self.cart_items)
+        add_row("Total Quantity:", str(total_quantity))
+
+    def on_calc_button_press(self, key):
+        current = self.cash_entry.get()
+        if key == "AC":
+            self.cash_entry.delete(0, "end")
+        elif key == "⌫":
+            self.cash_entry.delete(0, "end")
+            self.cash_entry.insert(0, current[:-1])
+        elif key == "=":
+            try:
+                expression = current.replace("x", "*").replace("%", "/100")
+                result = eval(expression)
+                self.cash_entry.delete(0, "end")
+                self.cash_entry.insert(0, str(round(result, 2)))
+            except:
+                self.cash_entry.delete(0, "end")
+                self.cash_entry.insert(0, "Error")
+        else:
+            self.cash_entry.insert("end", key)
+
+    def ensure_sales_table_exists(self):
+        try:
+            conn = sqlite3.connect("Trackwise.db")
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS sales (
+                    invoice_id TEXT,
+                    product_id TEXT,
+                    category TEXT,
+                    item_name TEXT,
+                    quantity_sold INTEGER,
+                    unit_price REAL,
+                    sale_date TEXT,
+                    total_price REAL
+                )
+            """)
+            conn.commit()
+        except Exception as e:
+            messagebox.showerror("Database Error", f"Failed to ensure 'sales' table exists:\n{e}")
+        finally:
+            conn.close()
+
+    def add_cash_value(self, value):
+        """Adds the selected cash button value to the cash entry."""
+        current = self.cash_entry.get()
+        try:
+            current_val = float(current) if current else 0.0
+        except ValueError:
+            current_val = 0.0
+        updated_val = current_val + value
+        self.cash_entry.delete(0, "end")
+        self.cash_entry.insert(0, f"{updated_val:.2f}")
+
 
     def confirm_payment(self, method):
         if messagebox.askyesno("Confirm Payment", f"Confirm {method} payment of RM {self.total_amount:.2f}?"):
@@ -87,10 +339,8 @@ class PaymentFrame(ctk.CTkFrame):
             self.last_payment_method = method
             self.show_receipt(invoice_id, method)
 
-
     def pay_cash(self):
-        input_popup = ctk.CTkInputDialog(title="Cash Payment", text=f"Total: RM {self.total_amount:.2f}\n\nEnter amount received:")
-        input_value = input_popup.get_input()
+        input_value = self.cash_entry.get()
         try:
             amount_given = float(input_value)
             if amount_given < self.total_amount:
@@ -102,7 +352,7 @@ class PaymentFrame(ctk.CTkFrame):
             self.last_payment_method = "Cash"
             self.show_receipt(invoice_id, "Cash", balance)
         except (ValueError, TypeError):
-            messagebox.showerror("Invalid Input", "Please enter a valid number.")
+            messagebox.showerror("Invalid Input", "Please enter a valid number in the cash input.")
 
     def record_sales(self, method):
         now = datetime.now()
@@ -116,10 +366,16 @@ class PaymentFrame(ctk.CTkFrame):
             for item_name, product_id, quantity, price, status in self.cart_items:
                 total_price = float(price) * int(quantity)
 
+                cursor.execute("SELECT category FROM inventory WHERE product_id = ?", (product_id,))
+                result = cursor.fetchone()
+                category = result[0] if result else "Unknown"
+
                 cursor.execute("""
-                    INSERT INTO sales (invoice_id, product_id, item_name, quantity_sold, unit_price, sale_date, total_price)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (invoice_id, product_id, item_name, quantity, price, sale_date, total_price))
+                    INSERT INTO sales (
+                        invoice_id, product_id, category, item_name, quantity_sold,
+                        unit_price, sale_date, total_price
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (invoice_id, product_id, category, item_name, quantity, price, sale_date, total_price))
 
                 cursor.execute("UPDATE inventory SET quantity = quantity - ? WHERE product_id = ?",
                                (quantity, product_id))
@@ -135,44 +391,64 @@ class PaymentFrame(ctk.CTkFrame):
 
             conn.commit()
             conn.close()
+            messagebox.showinfo("Payment Successful", f"Transaction recorded successfully.\nInvoice ID: {invoice_id}")
             return invoice_id
 
         except Exception as e:
             messagebox.showerror("Sales Error", f"Failed to record sales:\n{e}")
             return None
 
+    def open_debit_card_window(self):
+        from debit_card_window import DebitCardWindow
+        DebitCardWindow(self, self.total_amount, self.handle_debit_payment)
+
+    def handle_debit_payment(self, card_info):
+        """Callback function after debit card details are entered"""
+        # Optional: validate card_info here or log them
+        self.confirm_payment("Debit Card")
+
     def show_receipt(self, invoice_id, method, balance=None):
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         total_quantity = sum(q for _, _, q, _, _ in self.cart_items)
 
+        # Use wider layout and spacing
         receipt_lines = [
-            "================= RECEIPT =================",
-            "         Trackwise Product Store",
-            "        No. 5, Main Street, KL, Malaysia",
+            "=" * 42,
+            "        Trackwise Product Store",
+            "    No. 5, Main Street, KL, Malaysia",
             "         Tel: 012-3456789",
-            f"\nInvoice ID:         {invoice_id}",
-            f"Date:               {now}",
-            f"Payment Method:     {method}",
-            f"Total Quantity:     {total_quantity}",
-            "\n------------------------------------------",
-            "Item Name          Qty   Unit   Subtotal",
-            "                                 (RM)",
-            "------------------------------------------",
+            f"\nInvoice ID:        {invoice_id}",
+            f"Date:              {now}",
+            f"Payment Method:    {method}",
+            f"Total Quantity:    {total_quantity}",
+            "-" * 42,
+            "Item Name            Qty   Unit  Subtotal",
+            "                                   (RM)",
+            "-" * 42,
         ]
 
+        # Adjust item rows to fit more space
         for item_name, _, quantity, price, _ in self.cart_items:
             subtotal = float(price) * int(quantity)
-            receipt_lines.append(f"{item_name:<17}  {quantity:<4}  {price:<6}  {subtotal:.2f}")
+            receipt_lines.append(f"{item_name:<22}{quantity:<4}{price:<6}{subtotal:>8.2f}")
 
-        receipt_lines.append("------------------------------------------")
-        receipt_lines.append(f"Total Amount:                 RM {self.total_amount:.2f}")
+        receipt_lines.append("-" * 42)
+        receipt_lines.append(f"Net:                        RM {self.original_total:>8.2f}")
+        if self.discount_amount > 0:
+            receipt_lines.append(f"Discount:               -RM {self.discount_amount:>8.2f}")
+        if self.tax_amount > 0:
+            receipt_lines.append(f"Tax (6%):                  +RM {self.tax_amount:>8.2f}")
+        receipt_lines.append(f"Total Amount:               RM {self.total_amount:>8.2f}")
         if balance is not None:
-            receipt_lines.append(f"Change to Return:             RM {balance:.2f}")
-        receipt_lines.append("------------------------------------------")
-        receipt_lines.append("\nThank you for shopping with us!")
-        receipt_lines.append("Track your order with Invoice ID above.")
-        receipt_lines.append("***NOT VALID FOR REFUND OR EXCHANGE***")
-        receipt_lines.append("==========================================")
+            receipt_lines.append(f"Change to Return:           RM {balance:>8.2f}")
+
+        receipt_lines.append("-" * 42)
+        receipt_lines.append("\n      Thank you for shopping with us!")
+        receipt_lines.append("  Track your order with Invoice ID above.")
+        receipt_lines.append("  ***NOT VALID FOR REFUND OR EXCHANGE***")
+
+        receipt_lines.append("           Flawless POS System")
+        receipt_lines.append("=" * 42)
 
         receipt_str = "\n".join(receipt_lines)
         self.last_receipt_text = receipt_str
