@@ -74,7 +74,7 @@ class UserProfileApp(ctk.CTkFrame):
             width=self.main_frame_width,
             height=self.main_frame_height,
             corner_radius=10,
-            fg_color="#D9D9D9"
+            fg_color="#CEE5FF"
         )
         self.main_frame.place(x=main_frame_x, y=main_frame_y)
 
@@ -103,7 +103,7 @@ class UserProfileApp(ctk.CTkFrame):
             row = cursor.fetchone()
             conn.close()
 
-            image_path = row[0] if row and row[0] and os.path.exists(row[0]) else r"C:\Users\User\Documents\Ruxin file\ALL 2\profile_pic.png"
+            image_path = row[0] if row and row[0] and os.path.exists(row[0]) else r"profile_pic.png"
 
             profile_img = Image.open(image_path)
             profile_img = profile_img.resize((200, 200))
@@ -192,7 +192,6 @@ class UserProfileApp(ctk.CTkFrame):
             value.place(x=right_x, y=start_y + 44 + i * gap)
 
     def load_edit_page(self):
-        self.controller.current_dashboard.load_page("edit_profile", user_id=self.user_id)
-
+        self.controller.current_dashboard.load_page("profile_edit", user_id=self.user_id)
 
 
