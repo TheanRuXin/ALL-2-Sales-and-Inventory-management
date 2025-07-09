@@ -33,7 +33,7 @@ class Register(ctk.CTkFrame):
         main_frame = ctk.CTkFrame(self, fg_color="#D9D9D9", border_width=0, corner_radius=15)
         main_frame.pack(pady=(50,50), padx=200, fill="both", expand=True)
 
-        ctk.CTkLabel(main_frame, text="Create Account For New Employee", font=("Arial", 40, "bold")).pack(pady=10)
+        ctk.CTkLabel(main_frame, text="Register New Account", font=("Arial", 40, "bold")).pack(pady=10)
 
         second_frame = ctk.CTkFrame(main_frame, fg_color="#FFFFFF", corner_radius=15)
         second_frame.pack(pady=(20, 50), padx=100, fill="both", expand=True)
@@ -61,7 +61,7 @@ class Register(ctk.CTkFrame):
 
         # Right side: Password and Confirm Password
         ctk.CTkLabel(right_frame, text="Phone Number:", font=("Arial", 24)).pack(pady=(10, 5), anchor="w")
-        self.phone_entry = ctk.CTkEntry(right_frame, placeholder_text="ex:012-1234567", width=350, height=35,justify="center", font=("Arial", 24))
+        self.phone_entry = ctk.CTkEntry(right_frame, placeholder_text="ex:+6012-1234567", width=350, height=35,justify="center", font=("Arial", 24))
         self.phone_entry.pack(pady=(0, 30))
 
         ctk.CTkLabel(right_frame, text="Password:", font=("Arial", 24)).pack(pady=(10,5), anchor="w")
@@ -116,10 +116,27 @@ class Register(ctk.CTkFrame):
             print(f"Error sending email: {e}")
 
     def validate_email(self, email):
-        # Regular expression for validating email
         email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         if not re.match(email_regex, email):
             messagebox.showerror("Error", "Invalid email format.")
+            return False
+        conn = sqlite3.connect("Trackwise.db")
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
+        result = cursor.fetchone()
+        conn.close()
+        if result:
+            messagebox.showerror("Error", "Email already registered.")
+            return False
+
+        return True
+
+    def validate_phone(self, phone):
+        if not phone.startswith("+60"):
+            messagebox.showerror("Error", "Phone number must start with +60.")
+            return False
+        if not phone[1:].isdigit():  # skip the '+' sign
+            messagebox.showerror("Error", "Phone number must be digits.")
             return False
         return True
 
@@ -149,6 +166,8 @@ class Register(ctk.CTkFrame):
             return
         if email and not self.validate_email(email):
             return
+        if phone and not self.validate_phone(phone):
+            return
 
         conn = sqlite3.connect('Trackwise.db')
         cursor = conn.cursor()
@@ -173,4 +192,3 @@ class Register(ctk.CTkFrame):
         self.phone_entry.delete(0, 'end')
         self.password_entry.delete(0, 'end')
         self.confirm_password_entry.delete(0, 'end')
-        self.controller.show_frame("ManagerDashboard")
