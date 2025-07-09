@@ -284,8 +284,8 @@ class EditProfileApp(ctk.CTkFrame):
         conn.commit()
         conn.close()
         messagebox.showinfo("Success", "Profile updated successfully.")
-        if hasattr(self.controller, 'load_page'):
-            self.controller.load_page("user", user_id=self.user_id)
+        if hasattr(self.controller, 'current_dashboard'):
+            self.controller.current_dashboard.load_page("user", user_id=self.user_id)
 
     def cancel_edit(self):
         self.controller.current_dashboard.load_page("user", user_id=self.user_id)
