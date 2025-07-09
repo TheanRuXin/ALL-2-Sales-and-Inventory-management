@@ -20,7 +20,7 @@ class PaymentFrame(ctk.CTkFrame):
         self.tax_amount = tax_amount
         self.original_total = total_amount
         self.net_total = round(total_amount, 2)
-        self.total_amount = round(self.net_total + self.tax_amount - self.discount_amount, 2)
+        self.total_amount = round(self.net_total  - self.discount_amount, 2)
 
         self.ensure_sales_table_exists()
 
@@ -272,10 +272,10 @@ class PaymentFrame(ctk.CTkFrame):
             ctk.CTkLabel(row_frame, text=value, font=font_style, text_color=text_color).pack(side="right", padx=(0, 10))
 
         # Data rows
-        add_row("Net:", f"RM {self.original_total:.2f}")
+        add_row("Total Net before Tax:", f"RM {self.original_total- self.tax_amount:.2f}")
         add_row("Discount:", f"-RM {self.discount_amount:.2f}", color="red")
         add_row("Service Tax (6%):", f"+RM {self.tax_amount:.2f}")
-        add_row("Total Payable:", f"RM {self.total_amount:.2f}", bold=True)
+        add_row("Total Cost after Tax:", f"RM {self.total_amount:.2f}", bold=True)
         total_quantity = sum(q for _, _, q, _, _ in self.cart_items)
         add_row("Total Quantity:", str(total_quantity))
 
