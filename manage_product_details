@@ -1,9 +1,10 @@
+from tkinter import filedialog
 import sqlite3
 from six import BytesIO
 import qrcode
 import json
 import customtkinter as ctk
-from tkinter import messagebox, ttk, END,filedialog
+from tkinter import messagebox, ttk, END
 from PIL import Image
 
 class Setup_Database:
@@ -67,10 +68,22 @@ class ManageProductPage(ctk.CTkFrame):
         background_image = ctk.CTkImage(Image.open(r"C:\Users\User\Documents\Ruxin file\ALL 2\Manage_Product.png"), size=(self.width, self.height))
         background_image_label = ctk.CTkLabel(self, image=background_image, text="")
         background_image_label.place(x=0, y=0, relwidth=1, relheight=1)
-
+        self.categories = []
+        self.load_categories()
         self.create_widgets()
+        self.category_combobox.configure(values=self.categories)
+        if self.categories:
+            self.category_combobox.set("Select Categories")
+
         self.db = Setup_Database()
         self.refresh_table()
+
+    def load_categories(self):
+        conn = sqlite3.connect('Trackwise.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM categories")
+        self.categories = [row[0] for row in cursor.fetchall()]
+        conn.close()
 
     def create_widgets(self):
         # Item Name
@@ -95,11 +108,12 @@ class ManageProductPage(ctk.CTkFrame):
         self.category_text.place(x=1370 / 1920 * self.width, y=231 / 974 * self.height)
 
         self.category = ctk.StringVar()
-        self.category_entry = ctk.CTkEntry(self, font=("Inter", 18), width=320 / 1536 * self.width,
+        self.category_combobox = ctk.CTkComboBox(self, width=320 / 1536 * self.width,values=self.categories,
                                            height=45 / 864 * self.height, bg_color="#FFFFFF",
-                                           fg_color="#D9D9D9", border_color="#FFFFFF", text_color="black",
-                                           textvariable=self.category)
-        self.category_entry.place(x=1370 / 1920 * self.width, y=270 / 974 * self.height)
+                                           fg_color="#D9D9D9", border_color="#FFFFFF", text_color="black")
+        if self.categories:
+            self.category_combobox.set(self.categories[0])
+        self.category_combobox.place(x=1370 / 1920 * self.width, y=270 / 974 * self.height)
 
         # Quantity
         self.quantity_text = ctk.CTkLabel(self, text="Quantity:",
@@ -213,7 +227,7 @@ class ManageProductPage(ctk.CTkFrame):
         # Treeview
         self.entries = {
             "Name": self.name_entry,
-            "Category": self.category_entry,
+            "Category": self.category_combobox,
             "Quantity": self.quantity_entry,
             "Price": self.price_entry,
             "Status": self.status_entry,
@@ -253,6 +267,20 @@ class ManageProductPage(ctk.CTkFrame):
         self.product_treeview.pack()
 
         self.product_treeview.bind("<<TreeviewSelect>>", lambda event: self.on_treeview_select())
+        style.map("Treeview", background=[('selected', '#2A50CB')])
+        self.product_treeview.tag_configure("Red", background="#FF6666")
+        self.blink_red_rows()
+
+    def blink_red_rows(self):
+        current_color = getattr(self, "_blink_color", "#FF6666")
+        new_color = "#FFFFFF" if current_color == "#FF6666" else "#FF6666"
+        self._blink_color = new_color
+
+        # Update red tag color
+        self.product_treeview.tag_configure("Red", background=new_color)
+
+        # Repeat every 500 milliseconds
+        self.after(500, self.blink_red_rows)
 
     def refresh_table(self):
         self.product_id_map = {}
@@ -263,12 +291,11 @@ class ManageProductPage(ctk.CTkFrame):
         for row in self.db.view_items():
             item_id, product_id,item_name, category, quantity, price, status, register_date, image_data = row
             self.product_id_map[item_id]=product_id
-            stock_colour = 'Red' if quantity < 5 else 'Green'
-
+            tags = ("Red",) if int(quantity) < 5 else ()
             self.product_treeview.insert(
                 "", END,
                 values=(item_id, item_name, category, quantity, price, status, register_date),
-                tags=(stock_colour,)
+                tags=tags
             )
 
     def on_treeview_select(self):
@@ -358,7 +385,7 @@ class ManageProductPage(ctk.CTkFrame):
         product_id = self.product_id_map.get(item_id, "")
 
         new_name = self.entries["Name"].get()
-        new_category = self.entries["Category"].get()
+        new_category = self.category_combobox.get()
         new_quantity = self.entries["Quantity"].get()
         new_price = self.entries["Price"].get()
         new_status = self.entries["Status"].get()
@@ -373,6 +400,7 @@ class ManageProductPage(ctk.CTkFrame):
         if not (1 <= new_quantity_int <= 144):
             messagebox.showerror("Error", "Quantity must be between 1 and 144.")
             return
+
         # Original values from treeview (as strings)
         original_values = {
             "Name": item_values[1],
@@ -408,6 +436,11 @@ class ManageProductPage(ctk.CTkFrame):
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to read product image: {e}", parent=self)
                 return
+        if new_quantity_int < 5:
+            new_status = "Low Stock"
+        else:
+            new_status = "In Stock"
+        self.status_entry.set(new_status)
 
         # Proceed with update
         self.db.update_item(
@@ -482,7 +515,6 @@ class ManageProductPage(ctk.CTkFrame):
 
             self.db.update_item(
                 item_id=item_id,
-                product_id=product_id,
                 item_name=item_name,
                 category=category,
                 quantity=quantity,
@@ -525,7 +557,7 @@ class ManageProductPage(ctk.CTkFrame):
             cursor.execute("UPDATE inventory SET product_image = ? WHERE id = ?", (image_blob, item_id))
             conn.commit()
             conn.close()
-
+            self.product_image_path = file_path
             messagebox.showinfo("Success", "Image Updated Successfully.")
             self.on_treeview_select()  # refresh image shown
         except Exception as e:
