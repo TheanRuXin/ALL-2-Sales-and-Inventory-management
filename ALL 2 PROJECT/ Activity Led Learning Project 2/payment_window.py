@@ -117,7 +117,8 @@ class PaymentFrame(ctk.CTkFrame):
         buttons = [
             ("\U0001F4B5  Cash", self.pay_cash),
             ("\U0001F3E7  Debit Card", self.open_debit_card_window),
-            ("\U0001F4F7  DuitNow QR", lambda: self.confirm_payment("DuitNow QR")),
+            ("\U0001F4F7  DuitNow QR", self.open_duitnow_qr_window),
+
         ]
 
         self.payment_buttons = []  # Store all references here
@@ -212,9 +213,6 @@ class PaymentFrame(ctk.CTkFrame):
         )
         self.calc_frame.pack(padx=10, pady=(0, 0))  # Removed top padding
         self.calc_frame.pack_propagate(False)
-
-
-
 
         # Calculator Buttons Grid
         buttons = [
@@ -407,11 +405,31 @@ class PaymentFrame(ctk.CTkFrame):
         # Optional: validate card_info here or log them
         self.confirm_payment("Debit Card")
 
+    def open_duitnow_qr_window(self):
+        if hasattr(self, "duitnow_window") and self.duitnow_window.winfo_exists():
+            self.duitnow_window.lift()
+            self.duitnow_window.focus_force()
+            return
+
+        from duitnow_qr_window import DuitNowQRWindow
+        self.duitnow_window = DuitNowQRWindow(self, self.total_amount, self.handle_duitnow_payment)
+
+    def open_duitnow_qr_window(self):
+        if hasattr(self, "duitnow_window") and self.duitnow_window.winfo_exists():
+            self.duitnow_window.lift()
+            self.duitnow_window.focus_force()
+            return
+
+        from duitnow_qr_window import DuitNowQRWindow
+        self.duitnow_window = DuitNowQRWindow(self, self.total_amount, self.handle_duitnow_payment)
+
+    def handle_duitnow_payment(self, _):
+        self.confirm_payment("DuitNow QR")
+
     def show_receipt(self, invoice_id, method, balance=None):
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         total_quantity = sum(q for _, _, q, _, _ in self.cart_items)
 
-        # Use wider layout and spacing
         receipt_lines = [
             "=" * 42,
             "        Trackwise Product Store",
@@ -427,26 +445,33 @@ class PaymentFrame(ctk.CTkFrame):
             "-" * 42,
         ]
 
-        # Adjust item rows to fit more space
         for item_name, _, quantity, price, _ in self.cart_items:
             subtotal = float(price) * int(quantity)
             receipt_lines.append(f"{item_name:<22}{quantity:<4}{price:<6}{subtotal:>8.2f}")
 
         receipt_lines.append("-" * 42)
-        receipt_lines.append(f"Net:                        RM {self.original_total:>8.2f}")
+
+        # ✅ Use net before tax here
+        net_before_tax = self.original_total - self.tax_amount
+        receipt_lines.append(f"Net:                        RM {net_before_tax:>8.2f}")
+
         if self.discount_amount > 0:
-            receipt_lines.append(f"Discount:               -RM {self.discount_amount:>8.2f}")
+            receipt_lines.append(f"Discount:                  -RM {self.discount_amount:>8.2f}")
         if self.tax_amount > 0:
             receipt_lines.append(f"Tax (6%):                  +RM {self.tax_amount:>8.2f}")
+
         receipt_lines.append(f"Total Amount:               RM {self.total_amount:>8.2f}")
-        if balance is not None:
+
+        # ✅ Add Amount Paid and Change if cash payment
+        if method == "Cash":
+            amount_given = float(self.cash_entry.get())
+            receipt_lines.append(f"Amount Paid:                RM {amount_given:>8.2f}")
             receipt_lines.append(f"Change to Return:           RM {balance:>8.2f}")
 
         receipt_lines.append("-" * 42)
         receipt_lines.append("\n      Thank you for shopping with us!")
         receipt_lines.append("  Track your order with Invoice ID above.")
         receipt_lines.append("  ***NOT VALID FOR REFUND OR EXCHANGE***")
-
         receipt_lines.append("           Flawless POS System")
         receipt_lines.append("=" * 42)
 
