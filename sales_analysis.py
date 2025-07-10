@@ -22,10 +22,11 @@ matplotlib.rcParams['font.size'] = 13
 matplotlib.use('Agg')
 
 class SaleAnalysis(ctk.CTkFrame):
-    def __init__(self,parent,controller):
+    def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
         self.configure(fg_color="white")
+        self.create_sales_table()  # ✅ Ensure the table exists
         self.setup_ui()
 
     def setup_ui(self):
@@ -33,7 +34,7 @@ class SaleAnalysis(ctk.CTkFrame):
         title_label.place(x=50, y=20)
         filter_frame = ctk.CTkFrame(self, fg_color="white", bg_color="white")
         filter_frame.pack(pady=(80,50))
-        logo_image = CTkImage(light_image=Image.open(r"C:\Users\User\Documents\Ruxin file\ALL 2\logo.png"), size=(90, 80))
+        logo_image = CTkImage(light_image=Image.open(r"logo.png"), size=(90, 80))
         logo_label = ctk.CTkLabel(self, image=logo_image, text="")
         logo_label.place(relx=1.0, x=-60, y=20, anchor="ne")
 
@@ -287,14 +288,14 @@ class SaleAnalysis(ctk.CTkFrame):
     def plot_sales_trend(self, container, from_date, to_date, category=None, ax=None, limit=4, show_tooltip=True):
         plt.close('all')
         data = self.query_sales_over_time(from_date, to_date, category)
-        all_dates = sorted({d for sales in data.values() for d in sales.keys()},
-                           key=lambda d: datetime.strptime(d, "%Y-%m-%d"))
+
         fig = None
         if ax is None:
             fig, ax = plt.subplots(figsize=(6, 4))
             canvas = FigureCanvasTkAgg(fig, master=container)
             canvas.draw()
             canvas.get_tk_widget().pack()
+
         if not data:
             ax.set_title("No sales data in selected range", fontsize=14, fontname='Arial')
             ax.set_xlabel("Date", fontsize=14, fontname='Arial')
@@ -302,25 +303,42 @@ class SaleAnalysis(ctk.CTkFrame):
             ax.grid(True)
             plt.tight_layout()
             return
+
         if limit is not None:
             product_totals = {product: sum(sales.values()) for product, sales in data.items()}
             top_products = sorted(product_totals.items(), key=lambda x: x[1], reverse=True)[:limit]
             data = {product: data[product] for product, _ in top_products}
-        # Convert date strings to datetime objects
-        all_dt_objects = [datetime.strptime(d, "%Y-%m-%d") for d in all_dates]
+
+        from_dt = datetime.strptime(from_date, "%Y-%m-%d")
+        to_dt = datetime.strptime(to_date, "%Y-%m-%d")
+
+        all_dt_objects = [from_dt + timedelta(days=i) for i in range((to_dt - from_dt).days + 1)]
+
         for product, sales_data in data.items():
-            quantities = [sales_data.get(d, 0) for d in all_dates]
+            sales_data_dt = {datetime.strptime(k, "%Y-%m-%d"): v for k, v in sales_data.items()}
+            quantities = [sales_data_dt.get(dt, 0) for dt in all_dt_objects]
             line, = ax.plot(all_dt_objects, quantities, marker='o', label=product)
             if show_tooltip:
                 cursor = mplcursors.cursor([line], hover=True)
-                cursor.connect("add", lambda sel, prod=product, dts=all_dates, qts=quantities:
-                sel.annotation.set_text(f"{prod}\n{dts[int(sel.index)]}: {qts[int(sel.index)]}"))
-        ax.xaxis.set_major_locator(mdates.AutoDateLocator())
-        ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
-        # ✅ Only call fig.autofmt_xdate() if fig exists
+                cursor.connect("add", lambda sel, prod=product, dts=all_dt_objects, qts=quantities:
+                sel.annotation.set_text(f"{prod}\n{dts[int(sel.index)].strftime('%Y-%m-%d')}: {qts[int(sel.index)]}"))
+
+        if fig is not None and fig.get_size_inches()[0] >= 7:
+            # Fullscreen: show full dates
+            ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+            ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
+        else:
+            # Small view: avoid crowding
+            locator = mdates.AutoDateLocator()
+            ax.xaxis.set_major_locator(locator)
+            ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
+
+        ax.set_xlim([from_dt, to_dt])
+
         if fig is not None:
             fig.autofmt_xdate(rotation=45)
             fig.tight_layout(pad=3.0)
+
         ax.set_xlabel("Date", fontsize=14, fontname='Arial')
         ax.set_ylabel("Quantity Sold", fontsize=14, fontname='Arial')
         ax.tick_params(axis='x', labelsize=12)
@@ -333,7 +351,12 @@ class SaleAnalysis(ctk.CTkFrame):
         plt.close('all')
         conn = sqlite3.connect("Trackwise.db")
         cursor = conn.cursor()
-        cursor.execute("SELECT category, SUM(quantity_sold) FROM Sales WHERE DATE(sale_date) BETWEEN ? AND ? GROUP BY category", (from_date, to_date))
+        cursor.execute("""
+               SELECT category, SUM(quantity_sold)
+               FROM sales
+               WHERE substr(sale_date,1,10) BETWEEN ? AND ?
+               GROUP BY category
+           """, (from_date, to_date))
         rows = cursor.fetchall()
         conn.close()
 
@@ -363,10 +386,28 @@ class SaleAnalysis(ctk.CTkFrame):
         ax.axis('equal')
         plt.tight_layout()
 
+    def create_sales_table(self):
+        conn = sqlite3.connect("Trackwise.db")
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS sales (
+                invoice_id TEXT,
+                product_id TEXT,
+                category TEXT,
+                item_name TEXT,
+                quantity_sold INTEGER,
+                unit_price REAL,
+                sale_date TEXT,
+                total_price REAL
+            )
+        """)
+        conn.commit()
+        conn.close()
+
     def fetch_categories(self):
         conn = sqlite3.connect("Trackwise.db")
         cursor = conn.cursor()
-        cursor.execute("SELECT DISTINCT category FROM Sales")
+        cursor.execute("SELECT DISTINCT category FROM sales")
         categories = [row[0] for row in cursor.fetchall()]
         conn.close()
         return ["All"] + categories
@@ -374,11 +415,11 @@ class SaleAnalysis(ctk.CTkFrame):
     def query_sales_data(self, from_date, to_date, category=None):
         conn = sqlite3.connect("Trackwise.db")
         cursor = conn.cursor()
-        query = "SELECT item_name, SUM(quantity_sold) FROM Sales WHERE 1=1"
+        query = "SELECT item_name, SUM(quantity_sold) FROM sales WHERE 1=1"
         params = []
 
         if from_date and to_date:
-            query += " AND DATE(sale_date) BETWEEN ? AND ?"
+            query += " AND substr(sale_date,1,10) BETWEEN ? AND ?"
             params.extend([from_date, to_date])
 
         if category and category != "All":
@@ -398,26 +439,30 @@ class SaleAnalysis(ctk.CTkFrame):
         conn = sqlite3.connect("Trackwise.db")
         cursor = conn.cursor()
         query = """
-            SELECT item_name, DATE(sale_date), SUM(quantity_sold)
-            FROM sales
-            WHERE DATE(sale_date) BETWEEN ? AND ?
-        """
+                SELECT
+                    item_name,
+                    substr(sale_date,1,10) AS sale_day,   
+                    SUM(quantity_sold)
+                FROM sales
+                WHERE substr(sale_date,1,10) BETWEEN ? AND ?
+            """
         params = [from_date, to_date]
 
         if category and category != "All":
             query += " AND category = ?"
             params.append(category)
 
-        query += " GROUP BY item_name, DATE(sale_date) ORDER BY item_name, DATE(sale_date)"
+        query += """
+                GROUP BY item_name, substr(sale_date,1,10)
+                ORDER BY item_name, substr(sale_date,1,10)
+            """
         cursor.execute(query, params)
         rows = cursor.fetchall()
         conn.close()
 
         data = {}
-        for item_name, sale_date, qty in rows:
-            if item_name not in data:
-                data[item_name] = {}
-            data[item_name][sale_date] = qty
+        for item_name, sale_day, qty in rows:
+            data.setdefault(item_name, {})[sale_day] = qty
         return data
 
     def create_summary_table(self):
@@ -426,12 +471,12 @@ class SaleAnalysis(ctk.CTkFrame):
         category = self.cat_var.get()
         conn = sqlite3.connect("Trackwise.db")
         cursor = conn.cursor()
-        base_query = """
-            SELECT 
-                SUM(total_price) as total_revenue,
-                SUM(quantity_sold) as total_quantity
-            FROM Sales
-            WHERE DATE(sale_date) BETWEEN ? AND ?
+        base_query =  """
+            SELECT
+                SUM(total_price)   AS total_revenue,
+                SUM(quantity_sold) AS total_quantity
+            FROM sales
+            WHERE substr(sale_date,1,10) BETWEEN ? AND ?
         """
         params = [from_date, to_date]
         if category and category != "All":
@@ -444,9 +489,9 @@ class SaleAnalysis(ctk.CTkFrame):
         average_price = total_revenue / total_quantity if total_quantity else 0 #Average price per unit sold
         # Get top product
         top_product_query = """
-            SELECT item_name, SUM(quantity_sold) as total_qty
-            FROM Sales
-            WHERE DATE(sale_date) BETWEEN ? AND ?
+            SELECT item_name, SUM(quantity_sold) AS total_qty
+        FROM sales
+        WHERE substr(sale_date,1,10) BETWEEN ? AND ?
         """
         top_params = [from_date, to_date]
         if category and category != "All":
