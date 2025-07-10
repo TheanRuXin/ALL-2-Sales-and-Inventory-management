@@ -7,8 +7,9 @@ import customtkinter as ctk
 from tkinter import messagebox, ttk, END
 from PIL import Image
 
+
 class Setup_Database:
-    def __init__(self, db_file= "Trackwise.db"):
+    def __init__(self, db_file="Trackwise.db"):
         self.db_file = db_file
 
     def view_items(self):
@@ -19,14 +20,15 @@ class Setup_Database:
         conn.close()
         return rows
 
-    def delete_item(self, item_id):
+    def delete_item(self, product_id):
         conn = sqlite3.connect(self.db_file)
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM inventory WHERE id = ?", (item_id,))
+        cursor.execute("DELETE FROM inventory WHERE product_id = ?", (product_id,))
         conn.commit()
         conn.close()
 
-    def update_item(self, *, item_id, item_name, category, quantity, price, status, registration_date, image_blob=None):
+    def update_item(self, *, product_id, item_name, category, quantity, price, status, registration_date,
+                    image_blob=None):
         conn = sqlite3.connect(self.db_file)
         cursor = conn.cursor()
         if image_blob:
@@ -39,8 +41,8 @@ class Setup_Database:
                 status = ?,
                 register_date = ?,
                 product_image = ?
-                WHERE id = ?''',
-                (item_name, category, int(quantity), float(price), status, registration_date, image_blob, item_id)
+                WHERE product_id = ?''',
+                (item_name, category, int(quantity), float(price), status, registration_date, image_blob, product_id)
             )
         else:
             cursor.execute(
@@ -51,21 +53,23 @@ class Setup_Database:
                 price = ?,
                 status = ?,
                 register_date = ?
-                WHERE id = ?''',
-                (item_name, category, int(quantity), float(price), status, registration_date, item_id)
+                WHERE product_id = ?''',
+                (item_name, category, int(quantity), float(price), status, registration_date, product_id)
             )
         conn.commit()
         conn.close()
 
+
 class ManageProductPage(ctk.CTkFrame):
-    def __init__(self,parent,controller):
+    def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
         self.product_image_path = None
 
         self.width, self.height = 1574, 800
 
-        background_image = ctk.CTkImage(Image.open(r"C:\Users\User\Documents\Ruxin file\ALL 2\Manage_Product.png"), size=(self.width, self.height))
+        background_image = ctk.CTkImage(Image.open(r"C:\Users\jojol\Desktop\4007 ALL2\Manage_Product.png"),
+                                        size=(self.width, self.height))
         background_image_label = ctk.CTkLabel(self, image=background_image, text="")
         background_image_label.place(x=0, y=0, relwidth=1, relheight=1)
         self.categories = []
@@ -108,9 +112,9 @@ class ManageProductPage(ctk.CTkFrame):
         self.category_text.place(x=1370 / 1920 * self.width, y=231 / 974 * self.height)
 
         self.category = ctk.StringVar()
-        self.category_combobox = ctk.CTkComboBox(self, width=320 / 1536 * self.width,values=self.categories,
-                                           height=45 / 864 * self.height, bg_color="#FFFFFF",
-                                           fg_color="#D9D9D9", border_color="#FFFFFF", text_color="black")
+        self.category_combobox = ctk.CTkComboBox(self, width=320 / 1536 * self.width, values=self.categories,
+                                                 height=45 / 864 * self.height, bg_color="#FFFFFF",
+                                                 fg_color="#D9D9D9", border_color="#FFFFFF", text_color="black")
         if self.categories:
             self.category_combobox.set(self.categories[0])
         self.category_combobox.place(x=1370 / 1920 * self.width, y=270 / 974 * self.height)
@@ -214,7 +218,7 @@ class ManageProductPage(ctk.CTkFrame):
         self.search_entry.place(x=800 / 1920 * self.width, y=280 / 864 * self.height)
         self.search_entry.bind("<KeyRelease>", lambda e: self.search_items(self.search_var.get()))
 
-        # OR CODES
+        # QR CODES
         self.qr_label = ctk.CTkLabel(self, text="QR Code will Appear Here", bg_color="#FFFFFF", fg_color="#2A50CB",
                                      width=200, height=182)
         self.qr_label.place(x=458 / 1920 * self.width, y=133 / 974 * self.height)
@@ -239,12 +243,12 @@ class ManageProductPage(ctk.CTkFrame):
         style.configure("Treeview.Heading", font=("Inter", 18), rowheight=80)
         style.configure("Treeview", font=("Inter", 16), rowheight=32)
         frame = ctk.CTkFrame(self)
-        frame.place(x=112 / 1920 * self.width, y=345 / 864 * self.height)
-        self.product_treeview = ttk.Treeview(frame, columns=("ID", "Name", "Category", "Quantity",
+        frame.place(x=50 / 1920 * self.width, y=360 / 864 * self.height)
+        self.product_treeview = ttk.Treeview(frame, columns=("Product_ID", "Name", "Category", "Quantity",
                                                              "Price", "Status", "Register_Date"),
                                              show="headings")
-        self.product_treeview.heading("ID", text="ID")
-        self.product_treeview.column("ID", width=80, anchor="center")
+        self.product_treeview.heading("Product_ID", text="Product ID")
+        self.product_treeview.column("Product_ID", width=220, anchor="center")
 
         self.product_treeview.heading("Name", text="Name")
         self.product_treeview.column("Name", width=180, anchor="center")
@@ -253,7 +257,7 @@ class ManageProductPage(ctk.CTkFrame):
         self.product_treeview.column("Category", width=180, anchor="center")
 
         self.product_treeview.heading("Quantity", text="Quantity")
-        self.product_treeview.column("Quantity", width=180, anchor="center")
+        self.product_treeview.column("Quantity", width=150, anchor="center")
 
         self.product_treeview.heading("Price", text="Price")
         self.product_treeview.column("Price", width=170, anchor="center")
@@ -283,18 +287,17 @@ class ManageProductPage(ctk.CTkFrame):
         self.after(500, self.blink_red_rows)
 
     def refresh_table(self):
-        self.product_id_map = {}
-
+        # Clear existing items
         for row in self.product_treeview.get_children():
             self.product_treeview.delete(row)
 
+        # Add all items from database
         for row in self.db.view_items():
-            item_id, product_id,item_name, category, quantity, price, status, register_date, image_data = row
-            self.product_id_map[item_id]=product_id
+            item_id, product_id, item_name, category, quantity, price, status, register_date, image_data = row
             tags = ("Red",) if int(quantity) < 5 else ()
             self.product_treeview.insert(
                 "", END,
-                values=(item_id, item_name, category, quantity, price, status, register_date),
+                values=(product_id, item_name, category, quantity, price, status, register_date),
                 tags=tags
             )
 
@@ -313,11 +316,11 @@ class ManageProductPage(ctk.CTkFrame):
                     widget.set(value)
 
             self.generate_qr_code(values)
-            item_id = values[0]
-            product_id = self.product_id_map.get(item_id, "")
+            product_id = values[0]
+
             conn = sqlite3.connect(self.db.db_file)
             cursor = conn.cursor()
-            cursor.execute("SELECT product_image FROM inventory WHERE id = ?", (item_id,))
+            cursor.execute("SELECT product_image FROM inventory WHERE product_id = ?", (product_id,))
             result = cursor.fetchone()
             conn.close()
 
@@ -342,6 +345,7 @@ class ManageProductPage(ctk.CTkFrame):
 
     def generate_qr_code(self, item_values):
         data = {
+            "Product_ID": item_values[0],
             "Item": item_values[1],
             "Category": item_values[2],
             "Quantity": item_values[3],
@@ -353,16 +357,16 @@ class ManageProductPage(ctk.CTkFrame):
         json_data = json.dumps(data)
 
         qr = qrcode.QRCode(
-            version = 1,
-            box_size = 10,
-            border = 4
+            version=1,
+            box_size=10,
+            border=4
         )
         qr.add_data(json_data)
         qr.make(fit=True)
         img = qr.make_image(fill_colour="Blue", back_colour="White")
 
         buffer = BytesIO()
-        img.save(buffer, format = "PNG")
+        img.save(buffer, format="PNG")
         buffer.seek(0)
 
         qr_img = Image.open(buffer)
@@ -381,8 +385,7 @@ class ManageProductPage(ctk.CTkFrame):
             return
 
         item_values = self.product_treeview.item(selected_item, "values")
-        item_id = item_values[0]
-        product_id = self.product_id_map.get(item_id, "")
+        product_id = item_values[0]  # Now using product_id from first column
 
         new_name = self.entries["Name"].get()
         new_category = self.category_combobox.get()
@@ -420,11 +423,12 @@ class ManageProductPage(ctk.CTkFrame):
             "Register_Date": new_date,
         }
 
-        if all(str(original_values[key]).strip().lower() == str(updated_values[key]).strip().lower() for key in original_values):
+        if all(str(original_values[key]).strip().lower() == str(updated_values[key]).strip().lower() for key in
+               original_values):
             messagebox.showinfo("No Changes", "No changes were made to the item.")
             return
 
-        if self.is_duplicate_name(new_name, exclude_id=item_id):
+        if self.is_duplicate_name(new_name, exclude_product_id=product_id):
             messagebox.showerror("Error", f"An item with the name '{new_name}' already exists.")
             return
 
@@ -450,26 +454,27 @@ class ManageProductPage(ctk.CTkFrame):
             price=new_price_float,
             status=new_status,
             registration_date=new_date,
-            item_id=item_id,
-            image_blob = image_data
+            product_id=product_id,
+            image_blob=image_data
         )
 
         self.refresh_table()
+        # Re-select the updated item
         for row_id in self.product_treeview.get_children():
             values = self.product_treeview.item(row_id, "values")
-            if str(values[0]) == str(item_id):
+            if str(values[0]) == str(product_id):
                 self.product_treeview.selection_set(row_id)
                 self.on_treeview_select()
                 break
         messagebox.showinfo("Success", "Item Updated Successfully!")
 
-
-    def is_duplicate_name(self, name, exclude_id=None):
+    def is_duplicate_name(self, name, exclude_product_id=None):
         for item in self.db.view_items():
-            existing_id = item[0]
-            existing_name = item[1]
+            existing_item_id = item[0]
+            existing_product_id = item[1]
+            existing_name = item[2]
             if existing_name.lower() == name.lower():
-                if exclude_id is None or str(existing_id) != str(exclude_id):
+                if exclude_product_id is None or str(existing_product_id) != str(exclude_product_id):
                     return True
         return False
 
@@ -490,10 +495,10 @@ class ManageProductPage(ctk.CTkFrame):
             messagebox.showerror("Error", "No Item Selected!")
             return
 
-        item_id = self.product_treeview.item(selected_item, "values")[0]
+        product_id = self.product_treeview.item(selected_item, "values")[0]  # Using product_id now
 
         if messagebox.askyesno("Confirm Delete", "Are You Sure You Want To Delete This?"):
-            self.db.delete_item(item_id)
+            self.db.delete_item(product_id)
             self.refresh_table()
             messagebox.showinfo("Success", "Item Deleted Successfully!")
 
@@ -503,10 +508,8 @@ class ManageProductPage(ctk.CTkFrame):
         for row in self.product_treeview.get_children():
             self.product_treeview.delete(row)
 
-        self.product_id_map = {}
-
         for row in results:
-            item_id, product_id,item_name, category, quantity, price, status, register_date, image_data = row
+            item_id, product_id, item_name, category, quantity, price, status, register_date, image_data = row
 
             if int(quantity) < 5:
                 status = "Low Stock"
@@ -514,7 +517,7 @@ class ManageProductPage(ctk.CTkFrame):
                 status = "In Stock"
 
             self.db.update_item(
-                item_id=item_id,
+                product_id=product_id,
                 item_name=item_name,
                 category=category,
                 quantity=quantity,
@@ -522,14 +525,12 @@ class ManageProductPage(ctk.CTkFrame):
                 status=status,
                 registration_date=register_date
             )
-            self.product_id_map[item_id] = product_id
 
             stock_colour = 'Red' if int(quantity) < 5 else 'Green'
             self.product_treeview.insert("", END,
-                                         values=(item_id,item_name, category, quantity, price, status, register_date),
+                                         values=(product_id, item_name, category, quantity, price, status,
+                                                 register_date),
                                          tags=(stock_colour,))
-
-    from tkinter import filedialog
 
     def change_product_image(self):
         selected_item = self.product_treeview.selection()
@@ -537,7 +538,7 @@ class ManageProductPage(ctk.CTkFrame):
             messagebox.showerror("Error", "No item selected.")
             return
 
-        item_id = self.product_treeview.item(selected_item, "values")[0]
+        product_id = self.product_treeview.item(selected_item, "values")[0]  # Using product_id now
         file_path = filedialog.askopenfilename(title="Select Image", filetypes=[("Image Files", "*.png;*.jpg;*.jpeg")])
 
         if not file_path:
@@ -554,7 +555,7 @@ class ManageProductPage(ctk.CTkFrame):
             # Save resized image to database
             conn = sqlite3.connect(self.db.db_file)
             cursor = conn.cursor()
-            cursor.execute("UPDATE inventory SET product_image = ? WHERE id = ?", (image_blob, item_id))
+            cursor.execute("UPDATE inventory SET product_image = ? WHERE product_id = ?", (image_blob, product_id))
             conn.commit()
             conn.close()
             self.product_image_path = file_path
