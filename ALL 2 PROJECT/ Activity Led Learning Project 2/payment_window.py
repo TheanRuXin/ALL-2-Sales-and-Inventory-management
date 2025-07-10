@@ -4,6 +4,8 @@ import sqlite3
 from datetime import datetime
 import tempfile
 import os
+import random
+import string
 
 
 class PaymentFrame(ctk.CTkFrame):
@@ -352,9 +354,17 @@ class PaymentFrame(ctk.CTkFrame):
         except (ValueError, TypeError):
             messagebox.showerror("Invalid Input", "Please enter a valid number in the cash input.")
 
+    import random
+    import string
+
     def record_sales(self, method):
         now = datetime.now()
-        invoice_id = now.strftime("%d%m%Y%H%M%S")
+
+        # Generate 3 random uppercase letters
+        random_prefix = ''.join(random.choices(string.ascii_uppercase, k=3))
+
+        # Create invoice ID with prefix + timestamp
+        invoice_id = f"{random_prefix}{now.strftime('%d%m%Y%H%M%S')}"
         sale_date = now.isoformat(timespec='seconds')
 
         try:
@@ -368,6 +378,7 @@ class PaymentFrame(ctk.CTkFrame):
                 result = cursor.fetchone()
                 category = result[0] if result else "Unknown"
 
+                # Insert into sales
                 cursor.execute("""
                     INSERT INTO sales (
                         invoice_id, product_id, category, item_name, quantity_sold,
@@ -375,9 +386,11 @@ class PaymentFrame(ctk.CTkFrame):
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, (invoice_id, product_id, category, item_name, quantity, price, sale_date, total_price))
 
+                # Update inventory
                 cursor.execute("UPDATE inventory SET quantity = quantity - ? WHERE product_id = ?",
                                (quantity, product_id))
 
+                # Check stock
                 cursor.execute("SELECT quantity FROM inventory WHERE product_id = ?", (product_id,))
                 result = cursor.fetchone()
                 if result:
@@ -389,6 +402,7 @@ class PaymentFrame(ctk.CTkFrame):
 
             conn.commit()
             conn.close()
+
             messagebox.showinfo("Payment Successful", f"Transaction recorded successfully.\nInvoice ID: {invoice_id}")
             return invoice_id
 
