@@ -396,7 +396,7 @@ class Dashboard:
         self.total_price = 0.0
         self.tree.delete(*self.tree.get_children())
         self.total_label.configure(text="Total: RM 0.00")
-        self.calc_entry.configure(text="")
+        self.discount_entry.delete(0, 'end')
         self.quantity_entry.delete(0, 'end')
 
         self.update_total_label()  # <-- 🆕 Refresh net, tax, total
