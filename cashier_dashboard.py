@@ -32,7 +32,7 @@ class CashierDashboard(ctk.CTkFrame):
 
         self.create_sidebar()
         self.create_content_area()
-        self.load_page("home")
+        self.load_page("dashboard")
 
     def get_username(self):
         conn = sqlite3.connect("Trackwise.db")
