@@ -72,24 +72,24 @@ class InventoryReport(ctk.CTkFrame):
         style.configure("Treeview",rowheight=35, font=("Inter", 14))  # Font for rows
         style.configure("Treeview.Heading", font=("Inter", 15, "bold"))  # Font for column headers
 
-        columns = ("ID", "Item Name", "Category", "Opening Stock", "Closing Stock", "Quantity Sold", "Status")
+        columns = ("Product ID", "Item Name", "Category", "Opening Stock", "Closing Stock", "Quantity Sold", "Status")
         self.tree = ttk.Treeview(self, columns=columns, show="headings", height=11)
 
         for col in columns:
             self.tree.heading(col, text=col)
             self.tree.column(col, width=150, anchor="center")
-            self.tree.column("ID", width=80)
+            self.tree.column("Product ID", width=220)
             self.tree.column("Item Name", width=250)
             self.tree.column("Category", width=250)
             self.tree.column("Opening Stock", width=250)
             self.tree.column("Closing Stock", width=250)
             self.tree.column("Quantity Sold", width=250)
-            self.tree.column("Status", width=250)
+            self.tree.column("Status", width=180)
 
         # Scrollbar
         scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
-        self.tree.place(x=120, y=340)
+        self.tree.place(x=70, y=350)
         scrollbar.place(x=1750, y=390, height=330)
 
         self.tree.tag_configure('low_stock', foreground='black')
@@ -124,7 +124,7 @@ class InventoryReport(ctk.CTkFrame):
 
         query = """
             SELECT
-                i.id,
+                i.product_id,
                 i.item_name,
                 i.category,
                 i.quantity AS closing_stock,
@@ -146,8 +146,8 @@ class InventoryReport(ctk.CTkFrame):
             query += " WHERE " + " AND ".join(conditions)
 
         query += """
-            GROUP BY i.id, i.item_name, i.category, i.quantity 
-            ORDER BY i.id
+            GROUP BY i.product_id, i.item_name, i.category, i.quantity 
+            ORDER BY i.product_id
         """
 
         cursor.execute(query, params)
@@ -160,7 +160,7 @@ class InventoryReport(ctk.CTkFrame):
             self.tree.delete(item)
 
         for row in rows:
-            id_, name, category, closing_stock, quantity_sold = row
+            product_id, name, category, closing_stock, quantity_sold = row
             opening_stock = closing_stock + quantity_sold
             status = "Normal"
             if closing_stock == 0:
@@ -174,7 +174,7 @@ class InventoryReport(ctk.CTkFrame):
             elif status == "Out of Stock":
                 tags = ('out_stock',)
 
-            self.tree.insert("", "end", values=(id_, name, category, opening_stock, closing_stock, quantity_sold, status), tags=tags)
+            self.tree.insert("", "end", values=(product_id, name, category, opening_stock, closing_stock, quantity_sold, status), tags=tags)
 
     def on_search(self):
         self.refresh_dropdown()
@@ -228,14 +228,14 @@ class InventoryReport(ctk.CTkFrame):
         elements.append(Spacer(1, 20))
 
         # Table data
-        headers = ["ID", "Name", "Category", "Opening Stock", "Closing Stock", "Quantity Sold", "Status"]
+        headers = ["Product ID", "Name", "Category", "Opening Stock", "Closing Stock", "Quantity Sold", "Status"]
         table_data = [headers]
 
         for row in rows:
             table_data.append([str(val) for val in row])
 
         # Create table
-        t = Table(table_data, colWidths=[60, 120, 120, 100, 100, 100, 80])
+        t = Table(table_data, colWidths=[120, 120, 120, 100, 100, 100, 80])
         style = TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
