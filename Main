@@ -39,6 +39,11 @@ class InventoryApp(ctk.CTk):
             new_frame.place(x=0, y=0, relwidth=1, relheight=1)
         frame = self.frames.get(page_name)
         if frame:
+            for name, f in self.frames.items():
+                if hasattr(f, "unbind_enter_key"):
+                    f.unbind_enter_key()
+                if hasattr(frame, "bind_enter_key"):
+                    frame.bind_enter_key()
             self.current_dashboard = frame if "Dashboard" in page_name else None
             frame.tkraise()
         else:
