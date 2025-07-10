@@ -147,3 +147,9 @@ class LoginPage(ctk.CTkFrame):
                                  bg_color="#CFEAFA", text_color="#5885F0")
         new_label.place(x=266 / 1920 * w, y=740 / 974 * h)
         new_label.bind("<Button-1>", lambda e: self.new_account())
+
+    def clear_fields(self):
+        self.username.set("")
+        self.password.set("")
+        self.password_entry.configure(show="*")  # Reset password visibility
+        self.toggle_button.configure(text="👁")  # Reset toggle button
