@@ -30,71 +30,73 @@ class InventoryReport(ctk.CTkFrame):
         self.create_widgets()
 
     def create_widgets(self):
-        # Control variables
         self.category_var = ctk.StringVar(value="All")
         self.var_low_stock = ctk.BooleanVar(value=False)
 
-        # Label and Dropdown
-        self.label = ctk.CTkLabel(self.frame, text="Category:", font=("Inter", 28), text_color="black")
-        self.label.place(x=50, y=30)
+        # Header Frame
+        top_controls = ctk.CTkFrame(self.frame, fg_color="white")
+        top_controls.pack(fill="x", pady=(20, 0), padx=20)
+
+        ctk.CTkLabel(top_controls, text="Category:", font=("Inter", 22), text_color="black").grid(row=0, column=0,
+                                                                                                  padx=(0, 10))
 
         categories = self.fetch_categories()
-        categories.insert(0, "All")  # Add "All" at the top of the list
+        categories.insert(0, "All")
+        self.dropdown = ctk.CTkOptionMenu(top_controls, variable=self.category_var, values=categories, width=200,
+                                          font=("Inter", 16))
+        self.dropdown.grid(row=0, column=1, padx=10)
 
-        self.dropdown = ctk.CTkOptionMenu(self.frame, variable=self.category_var,
-                                          values=categories,
-                                          width=200, height=30, font=("Inter", 18))
-        self.dropdown.place(x=180, y=35)
+        self.checkbox = ctk.CTkCheckBox(top_controls, text="Low Stock / Out of Stock", font=("Inter", 18),
+                                        text_color="black", variable=self.var_low_stock)
+        self.checkbox.grid(row=0, column=2, padx=20)
 
-        self.checkbox = ctk.CTkCheckBox(self.frame, text="Low Stock / Out of Stock",
-                                        font=("Inter", 20), text_color="black",
-                                        variable=self.var_low_stock)
-        self.checkbox.place(x=50, y=90)
+        ctk.CTkButton(top_controls, text="Search", command=self.on_search, width=140, font=("Inter", 16)).grid(row=0,
+                                                                                                               column=3,
+                                                                                                               padx=10)
+        ctk.CTkButton(top_controls, text="Generate Report", command=self.generate_pdf, width=160,
+                      font=("Inter", 16)).grid(row=0, column=4, padx=10)
+        ctk.CTkButton(top_controls, text="Generate Chart", command=self.show_bar_chart, width=160,
+                      font=("Inter", 16)).grid(row=0, column=5, padx=10)
 
-        # Buttons
-        self.button_search = ctk.CTkButton(self.frame, text="Search", command=self.on_search,
-                                           width=140, height=35, font=("Inter", 16))
-        self.button_search.place(x=450, y=35)
-
-        self.button_report = ctk.CTkButton(self.frame, text="Generate Report", command=self.generate_pdf,
-                                           width=150, height=35, font=("Inter", 16))
-        self.button_report.place(x=1100, y=35)
-
-        self.button_chart = ctk.CTkButton(self.frame, text="Generate Chart", command=self.show_bar_chart,
-                                          width=150, height=35, font=("Inter", 16))
-        self.button_chart.place(x=1100, y=100)
-
-        self.button_back = ctk.CTkButton(self, text="Back", command=self.go_back,
-                                         width=140, height=35, font=("Inter", 16))
-        self.button_back.place(x=50, y=680)
-
-        # Treeview
+        # Treeview Styling
         style = ttk.Style()
-        style.configure("Treeview",rowheight=35, font=("Inter", 14))  # Font for rows
-        style.configure("Treeview.Heading", font=("Inter", 15, "bold"))  # Font for column headers
+        style.theme_use("default")
+        style.configure("Treeview.Heading", background="#0C5481", foreground="white", font=("Inter", 14, "bold"))
+        style.configure("Treeview", background="#eaf9ff", foreground="#057687", rowheight=35, fieldbackground="#eaf9ff",
+                        font=("Inter", 13))
+        style.map("Treeview", background=[('selected', '#b0d9e6')])
+
+        # Table Frame
+        table_frame = ctk.CTkFrame(self.frame, fg_color="transparent")
+        table_frame.pack(fill="both", expand=True, pady=20, padx=20)
 
         columns = ("ID", "Item Name", "Category", "Opening Stock", "Closing Stock", "Quantity Sold", "Status")
-        self.tree = ttk.Treeview(self, columns=columns, show="headings", height=11)
+        self.tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=12)
 
         for col in columns:
             self.tree.heading(col, text=col)
-            self.tree.column(col, width=150, anchor="center")
-            self.tree.column("ID", width=80)
-            self.tree.column("Item Name", width=250)
-            self.tree.column("Category", width=250)
-            self.tree.column("Opening Stock", width=250)
-            self.tree.column("Closing Stock", width=250)
-            self.tree.column("Quantity Sold", width=250)
-            self.tree.column("Status", width=250)
+            self.tree.column(col, anchor="center", width=180)
+        self.tree.column("ID", width=80)
+        self.tree.column("Item Name", width=250)
+
+        self.tree.grid(row=0, column=0, sticky="nsew")
 
         # Scrollbar
-        scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
+        scrollbar = ctk.CTkScrollbar(table_frame, orientation="vertical", command=self.tree.yview,
+                                     fg_color="#0C5481", button_color="#cce7f9", button_hover_color="#0882c4")
+        scrollbar.grid(row=0, column=1, sticky="ns")
         self.tree.configure(yscrollcommand=scrollbar.set)
-        self.tree.place(x=120, y=340)
-        scrollbar.place(x=1750, y=390, height=330)
 
+        # Grid expand
+        table_frame.grid_rowconfigure(0, weight=1)
+        table_frame.grid_columnconfigure(0, weight=1)
+
+        # Treeview Tags
         self.tree.tag_configure('low_stock', foreground='orange')
         self.tree.tag_configure('out_stock', foreground='red')
+
+        # Back Button
+        ctk.CTkButton(self, text="Back", command=self.go_back, width=120, font=("Inter", 16)).place(x=50, y=680)
 
     def fetch_categories(self):
         conn = sqlite3.connect("Trackwise.db")
@@ -119,9 +121,9 @@ class InventoryReport(ctk.CTkFrame):
                 i.item_name,
                 i.category,
                 i.quantity AS closing_stock,
-                IF NULL(SUM(s.quantity_sold), 0) AS quantity_sold
+                IFNULL(SUM(s.quantity_sold), 0) AS quantity_sold
             FROM inventory i
-            LEFT JOIN sales s ON i.id = s.item_id
+            LEFT JOIN sales s ON i.product_id = s.product_id
         """
 
         conditions = []
@@ -141,9 +143,15 @@ class InventoryReport(ctk.CTkFrame):
             ORDER BY i.id
         """
 
-        cursor.execute(query, params)
-        rows = cursor.fetchall()
-        conn.close()
+        try:
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+        except Exception as e:
+            messagebox.showerror("Database Error", f"Query failed:\n{e}")
+            rows = []
+        finally:
+            conn.close()
+
         return rows
 
     def populate_treeview(self, rows):
