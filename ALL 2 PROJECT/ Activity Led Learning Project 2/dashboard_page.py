@@ -2,22 +2,23 @@ import customtkinter as ctk
 from tkinter import messagebox, ttk
 from PIL import Image
 import os
+import io
 import sqlite3
 from payment_window import PaymentFrame
-from tkinter import simpledialog
 import threading
+import pythoncom
 import platform
 if platform.system() == "Windows":
     import wmi  # For Windows USB detection
 elif platform.system() == "Linux":
     import pyudev
 
-
-
 class Dashboard:
     def __init__(self, parent, cashier_username, cart_items=None, total_price=0.0, on_cart_update=None,
                  selected_category=None, selected_item=None, quantity_text=""):
         self.on_cart_update = on_cart_update
+        self.current_image = None
+        self.product_img = None
         self.selected_category = selected_category
         self.selected_item = selected_item
         self.saved_quantity_text = quantity_text
@@ -57,13 +58,23 @@ class Dashboard:
             return self.cashier_username
 
     def load_dashboard_content(self, restore=False):
-        # Create user greeting
         user_icon = self.load_icon("user1.png", size=(40, 40))
         self.user_frame = ctk.CTkFrame(self.main_frame, fg_color="white")
         self.user_frame.grid(row=0, column=0, sticky="nw", padx=30, pady=20)
         ctk.CTkLabel(self.user_frame, image=user_icon, text="").pack(side="left", padx=(0, 10))
         ctk.CTkLabel(self.user_frame, text=f"Welcome, {self.cashier_name}", font=("Arial", 16, "bold"), text_color="#0C5481").pack(side="left")
-
+        self.product_img = None
+        self.product_image_label = ctk.CTkLabel(
+            self.main_frame,
+            text="Product Image Will Appear Here",
+            fg_color="#cce7f9",
+            text_color="white",
+            width=200,
+            height=180
+        )
+        self.product_image_label.place(x=250, y=15)
+        self.product_image_label.configure(image=self.current_image, text="")
+        self.product_image_label.image_ref = self.current_image
 
         button_config = {"width": 300, "height": 50, "fg_color": "#0C5481", "hover_color": "#2874ed", "text_color": "white", "font": ("Arial", 14, "bold")}
         button_panel = ctk.CTkFrame(self.main_frame, fg_color="white")
@@ -82,7 +93,7 @@ class Dashboard:
             dropdown_font=("Inter", 14), dropdown_hover_color="#8dc0f7",
             button_color="#0C5481", button_hover_color="#2874ed"
         )
-        self.category_dropdown.pack(padx=10, pady=(5, 20))
+        self.category_dropdown.pack(padx=5, pady=(5, 20))
 
         # 🔽 Item Dropdown
         self.item_var = ctk.StringVar(value="Select Item")
@@ -96,7 +107,7 @@ class Dashboard:
             dropdown_font=("Inter", 14), dropdown_hover_color="#8dc0f7",
             button_color="#0C5481", button_hover_color="#2874ed"
         )
-        self.item_dropdown.pack(padx=10, pady=(20, 20))
+        self.item_dropdown.pack(padx=5, pady=(20, 20))
 
         # 🔽 Quantity Entry
         self.quantity_entry = ctk.CTkEntry(
@@ -105,10 +116,10 @@ class Dashboard:
             placeholder_text="Quantity", placeholder_text_color="#0882c4",
             border_color="#0C5481", width=300
         )
-        self.quantity_entry.pack(padx=10, pady=(20, 20))
+        self.quantity_entry.pack(padx=5, pady=(20, 20))
         self.quantity_entry.bind("<Return>", lambda event: self.add_to_cart())
 
-        ctk.CTkButton(button_panel, text="Add to Cart", command=self.add_to_cart, **button_config).pack(pady=(10, 20), fill="x")
+        ctk.CTkButton(button_panel, text="Add to Cart", command=self.add_to_cart, **button_config).pack(pady=(5, 20), fill="x")
         ctk.CTkButton(button_panel, text="Delete Item", command=self.delete_last_item, **button_config).pack(pady=(0, 20), fill="x")
         ctk.CTkButton(button_panel, text="Cancel Order", command=self.cancel_order, width=300, height=50, fg_color="red", hover_color="#b01518", text_color="white", font=("Arial", 14, "bold")).pack(pady=(0, 20), fill="x")
         ctk.CTkButton(button_panel, text="Proceed to Payment", command=self.pay_order, width=300, height=50, fg_color="#5cb85c", hover_color="green", text_color="white", font=("Arial", 14, "bold")).pack(pady=(0, 20), fill="x")
@@ -137,13 +148,13 @@ class Dashboard:
         self.refresh_cart_treeview()
         self.update_total_label()
 
-        # ✅ Restore dropdowns and quantity field if values were passed
         if self.selected_category and self.selected_category in self.fetch_categories():
             self.category_var.set(self.selected_category)
             self.update_items_dropdown(None)
 
             if self.selected_item and self.selected_item in self.fetch_items_by_category(self.selected_category):
                 self.item_var.set(self.selected_item)
+                self.display_selected_item_info()
 
         if self.saved_quantity_text:
             self.quantity_entry.insert(0, self.saved_quantity_text)
@@ -170,34 +181,14 @@ class Dashboard:
         items = self.fetch_items_by_category(self.category_var.get())
         self.item_dropdown.configure(values=items)
 
-    def check_for_usb_device(self):
-        def usb_check():
-            if platform.system() == "Windows":
-                c = wmi.WMI()
-                for usb in c.Win32_USBControllerDevice():
-                    if "iPhone" in str(usb.Dependent):
-                        self.prompt_qr_device()
-                        break
-            elif platform.system() == "Linux":
-                context = pyudev.Context()
-                monitor = pyudev.Monitor.from_netlink(context)
-                for device in iter(monitor.poll, None):
-                    if device.get("ID_MODEL") and "iPhone" in device.get("ID_MODEL"):
-                        self.prompt_qr_device()
-                        break
+        self.product_image_label.configure(image=None, text="")
+        self.item_dropdown.bind("<<ComboboxSelected>>", self.display_selected_item_info)
 
-        threading.Thread(target=usb_check, daemon=True).start()
-
-    def prompt_qr_device(self):
-        result = messagebox.askyesno("QR Device Detected", "iPhone connected. Use this device for QR scanning?")
-        if result:
-            self.qr_entry.focus_set()
 
     def add_to_cart(self):
         item = self.item_var.get()
         qty_text = self.quantity_entry.get()
 
-        # Basic input validation
         if item in ("Select Item", "Select a Category First") or not qty_text.isdigit():
             messagebox.showwarning("Input Error", "Select a valid item and enter quantity.")
             return
@@ -208,7 +199,7 @@ class Dashboard:
             with sqlite3.connect('Trackwise.db') as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    SELECT product_id, price, status, quantity 
+                    SELECT product_id, price, status, quantity, product_image
                     FROM inventory 
                     WHERE LOWER(TRIM(item_name)) = ?
                 """, (item.strip().lower(),))
@@ -221,7 +212,7 @@ class Dashboard:
             messagebox.showerror("Item Error", f"No matching item found for '{item}'.")
             return
 
-        prod_id, price, status, available_stock = result
+        prod_id, price, status, available_stock, image_blob = result
 
         try:
             price = float(price)
@@ -247,56 +238,25 @@ class Dashboard:
         self.refresh_cart_treeview()
         self.total_label.configure(text=f"Total: RM {self.total_price:.2f}")
         self.quantity_entry.delete(0, 'end')
-
         self.update_total_label()
+
+        if image_blob:
+            try:
+                image = Image.open(io.BytesIO(image_blob)).convert("RGBA")
+
+                display_size = (200, 180)
+
+                self.current_image = ctk.CTkImage(light_image=image, dark_image=image, size=display_size)
+                self.product_image_label.configure(image=self.current_image, text="")
+                self.product_image_label.image_ref = self.current_image
+                self.product_image_label.configure(width=display_size[0], height=display_size[1])
+            except Exception as e:
+                self.product_image_label.configure(image=None, text="Invalid image")
+                print(f"[Image Load Error] {e}")
 
         if self.on_cart_update:
             self.on_cart_update(self.cart_items, self.total_price)
 
-    def handle_qr_scan(self, event):
-        scanned_product_id = self.qr_entry.get().strip()
-        self.qr_entry.delete(0, 'end')
-
-        if not scanned_product_id:
-            messagebox.showwarning("QR Scan", "Scanned data is empty.")
-            return
-
-        try:
-            with sqlite3.connect('Trackwise.db') as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT item_name, product_id, quantity, price, status 
-                    FROM inventory 
-                    WHERE product_id = ?
-                """, (scanned_product_id,))
-                result = cursor.fetchone()
-
-                if not result:
-                    messagebox.showerror("QR Scan", f"No product found with ID {scanned_product_id}.")
-                    return
-
-                name, pid, stock_qty, price, status = result
-                quantity_to_add = 1
-                cart_qty = sum(qty for n, _, qty, _, _ in self.cart_items if n == name)
-
-                if cart_qty + quantity_to_add > stock_qty:
-                    messagebox.showwarning("Stock Limit", f"Only {stock_qty - cart_qty} units available.")
-                    return
-
-                for i, (n, pid_, qty, price_, st) in enumerate(self.cart_items):
-                    if n == name:
-                        self.cart_items[i] = (n, pid_, qty + quantity_to_add, price, st)
-                        break
-                else:
-                    self.cart_items.append((name, pid, quantity_to_add, price, status))
-
-                self.total_price += quantity_to_add * price
-                self.refresh_cart_treeview()
-                self.update_total_label()
-
-
-        except Exception as e:
-            messagebox.showerror("Database Error", f"Failed to fetch product details.\n{e}")
 
     def refresh_cart_treeview(self):
         self.tree.delete(*self.tree.get_children())
@@ -369,21 +329,17 @@ class Dashboard:
         ).pack(fill="both", expand=True)
 
     def reload_dashboard_content(self, keep_cart=False):
-        # Preserve cart and total only if keep_cart is True
         current_cart = self.cart_items if keep_cart else []
         current_total = self.total_price if keep_cart else 0.0
 
-        # Destroy everything in the parent container (root frame)
         for widget in self.parent.winfo_children():
             widget.destroy()
 
-        # Recreate Dashboard with or without cart
         Dashboard(self.parent, self.cashier_username, current_cart, current_total)
 
     def clear_cart_and_reload(self):
         self.cart_items.clear()
         self.total_price = 0.0
-        self.update_total_label()  # <-- 🆕 Ensure values reset before reload
         self.reload_dashboard_content()
 
     def update_dashboard_cart(self, cart_items, total_price):
@@ -467,5 +423,3 @@ class Dashboard:
 
 def load_dashboard_content(parent, cashier_username, cart_items=None, total_price=0.0, on_cart_update=None):
     return Dashboard(parent, cashier_username, cart_items, total_price, on_cart_update)
-
-
