@@ -63,8 +63,7 @@ class EditProfileApp(ctk.CTkFrame):
         entry_fields = [
             ("Username", 480, 140),
             ("Email", 480, 260),
-            ("Phone Number", 480, 380),
-
+            ("Phone Number", 480, 380)
         ]
         entry_font = ("Inter", 16)
 
@@ -74,16 +73,14 @@ class EditProfileApp(ctk.CTkFrame):
             entry.place(x=x, y=y)
             self.entries[label_text] = entry
 
-        # Adding Date of Birth field as a calendar
         self.dob_calendar = DateEntry(self.main_frame, date_pattern='dd/mm/yyyy', width=31, background='lightblue',
                                       foreground='black', borderwidth=2,  font=('Inter', 14))
         self.dob_calendar.place(x=600, y=630)
-        self.entries["Date of Birth"] = self.dob_calendar  # Store reference to the calendar widget
-
+        self.entries["Date of Birth"] = self.dob_calendar
         self.pw_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent", width=400, height=500)
         self.pw_frame.place(x=915, y=160)
         self.pw_frame_visible = False
-        self.pw_frame.place_forget()  # Hide initially
+        self.pw_frame.place_forget()
 
         pw_fields = [
             ("Old Password", 0),
@@ -99,7 +96,6 @@ class EditProfileApp(ctk.CTkFrame):
                                  font=entry_font, show="*")
             entry.place(x=0, y=y + 30)
             self.entries[label_text] = entry
-
     def add_buttons(self):
         button_data = [
             ("Save", 1050, 580, self.save_changes),
@@ -108,17 +104,16 @@ class EditProfileApp(ctk.CTkFrame):
         ]
 
         for text, x, y, cmd in button_data:
-            width = 190 if text in ["Change Photo"] else 120
-            button = ctk.CTkButton(self.main_frame, text=text, command=cmd, width=width, height=40, font=("Inter", 16))
+            width = 190 if text in "Change Photo" else 120
+            button = ctk.CTkButton(self.main_frame, text=text, command=cmd, width=width, height=40, font=("Inter",16))
             button.place(x=x, y=y)
-        # Add this inside the add_buttons() method
         change_pw_button = ctk.CTkButton(
             self.main_frame,
             text="Change Password (optional)",
             command=self.toggle_password_fields,
             width=190,
             height=40,
-            font=("Inter", 18)  # <=== Increase font size here
+            font=("Inter", 18)
         )
         change_pw_button.place(x=900, y=80)
 
@@ -135,7 +130,7 @@ class EditProfileApp(ctk.CTkFrame):
             if hasattr(self, "photo_path") and self.photo_path and os.path.exists(self.photo_path):
                 image_path = self.photo_path
             else:
-                image_path = r"C:\Users\jojol\Desktop\4007 ALL2\profile_pic.png"
+                image_path = r"C:\Users\User\Documents\Ruxin file\ALL 2\profile_pic.png"
 
             img = ctk.CTkImage(Image.open(image_path), size=(200, 200))
             self.image_label = ctk.CTkLabel(self.main_frame, image=img, text="")
