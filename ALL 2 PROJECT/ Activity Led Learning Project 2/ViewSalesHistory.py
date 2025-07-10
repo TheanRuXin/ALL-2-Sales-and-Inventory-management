@@ -71,15 +71,52 @@ class SalesHistoryPage(ctk.CTkFrame):
         ctk.CTkButton(self.left_frame, text="Generate Sales Chart", command=self.generate_sales_chart, width=238, height=35, fg_color="#2155CD", font=("Arial", 20)).place(x=10, y=410)
         ctk.CTkButton(self.left_frame, text="Back", command=self.back_to_dashboard, width=238, height=35, fg_color="#2155CD", font=("Arial", 20)).place(x=10, y=480)
 
+        # Add Treeview styling (like in SalesReportPage)
+        style = ttk.Style()
+        style.theme_use("default")
+        style.configure("Treeview.Heading",
+                        background="#0C5481", foreground="white",
+                        font=("Arial", 15, "bold"))
+        style.configure("Treeview",
+                        background="#eaf9ff",
+                        foreground="#057687",
+                        rowheight=30,
+                        fieldbackground="#eaf9ff",
+                        font=("Arial", 14))
+        style.map('Treeview',
+                  background=[('selected', '#b0d9e6')])
+
         columns = ("Date", "Item Name", "Category", "Quantity Sold", "Total Price (RM)")
-        self.tree = ttk.Treeview(self.right_frame, columns=columns, show="headings", height=20)
+
+        # Wrap treeview & label together
+        table_frame = ctk.CTkFrame(self.right_frame, fg_color="transparent")
+        table_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        tree_container = ctk.CTkFrame(table_frame, fg_color="transparent")
+        tree_container.pack(fill="both", expand=True)
+
+        self.tree = ttk.Treeview(tree_container, columns=columns, show="headings", height=18)
         for col in columns:
             self.tree.heading(col, text=col)
-            self.tree.column(col, anchor="center", width=140)
-        self.tree.place(relx=0.5, rely=0.8, anchor="s", width=1185, height=540)
+            self.tree.column(col, anchor="center", width=240)
 
-        self.total_label = ctk.CTkLabel(self.right_frame, text="Total Sales: RM0.00", font=("Arial", 24, "bold"))
-        self.total_label.place(x=10, y=480)
+        self.tree.grid(row=0, column=0, sticky="nsew")
+
+        scrollbar = ctk.CTkScrollbar(tree_container, orientation="vertical",
+                                     command=self.tree.yview,
+                                     fg_color="#0C5481",
+                                     button_color="#cce7f9",
+                                     button_hover_color="#0882c4")
+        scrollbar.grid(row=0, column=1, sticky="ns")
+        self.tree.configure(yscrollcommand=scrollbar.set)
+
+        # Tree container grid config
+        tree_container.grid_rowconfigure(0, weight=1)
+        tree_container.grid_columnconfigure(0, weight=1)
+
+        # Total label placed below treeview
+        self.total_label = ctk.CTkLabel(table_frame, text="Total Sales: RM0.00", font=("Arial", 24, "bold"))
+        self.total_label.pack(pady=(5, 10), anchor="w", padx=10)
 
         self.after(100, self.place_frames_at_bottom)
 
