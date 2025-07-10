@@ -10,8 +10,15 @@ class DebitCardWindow(ctk.CTkToplevel):
         self.amount_due = amount_due
         self.on_submit_callback = on_submit_callback
         self.configure(fg_color="white")
-        self.resizable(False, False)
+        self.resizable(True, True)
 
+        # --- Modal + Always on Top + Center ---
+        self.attributes("-topmost", True)
+        self.grab_set()
+        self.update_idletasks()
+        self.center_window(master)
+
+        # --- UI Elements ---
         ctk.CTkLabel(self, text="Debit Card Payment", font=("Arial", 20, "bold"), text_color="#0C5481").pack(pady=15)
 
         self.name_entry = ctk.CTkEntry(self, placeholder_text="Card Holder Name", width=300)
@@ -20,7 +27,7 @@ class DebitCardWindow(ctk.CTkToplevel):
         self.card_entry = ctk.CTkEntry(self, placeholder_text="Card Number (16 digits)", width=300)
         self.card_entry.pack(pady=10)
 
-        # Frame for expiry and CVV side by side
+        # Expiry & CVV
         expiry_cvv_frame = ctk.CTkFrame(self, fg_color="transparent")
         expiry_cvv_frame.pack(pady=10)
 
@@ -37,6 +44,22 @@ class DebitCardWindow(ctk.CTkToplevel):
         self.submit_btn = ctk.CTkButton(self, text="Pay Now", command=self.submit_payment,
                                         fg_color="#0C5481", hover_color="#2874ed", text_color="white")
         self.submit_btn.pack(pady=10)
+
+    def center_window(self, master):
+        """Centers the window over the parent."""
+        self.update_idletasks()
+        parent_x = master.winfo_rootx()
+        parent_y = master.winfo_rooty()
+        parent_w = master.winfo_width()
+        parent_h = master.winfo_height()
+
+        window_w = self.winfo_width()
+        window_h = self.winfo_height()
+
+        pos_x = parent_x + (parent_w // 2) - (window_w // 2)
+        pos_y = parent_y + (parent_h // 2) - (window_h // 2)
+
+        self.geometry(f"+{pos_x}+{pos_y}")
 
     def submit_payment(self):
         name = self.name_entry.get().strip()
