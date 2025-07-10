@@ -35,7 +35,7 @@ class SalesHistoryPage(ctk.CTkFrame):
     def fetch_categories(self):
         conn = sqlite3.connect("Trackwise.db")
         cursor = conn.cursor()
-        cursor.execute("SELECT DISTINCT category FROM Sales")
+        cursor.execute("SELECT DISTINCT category FROM sales")
         categories = [row[0]for row in cursor.fetchall()]
         conn.close()
         return["All"] + categories
@@ -71,7 +71,7 @@ class SalesHistoryPage(ctk.CTkFrame):
         ctk.CTkButton(self.left_frame, text="Print Report", command=self.generate_pdf_report, width=238, height=35,fg_color="#2155CD",font=("Arial", 20)).place(x=10, y=340)
         ctk.CTkButton(self.left_frame, text="Generate Sales Chart", command=self.generate_sales_chart, width=238,height=35,fg_color="#2155CD",font=("Arial", 20)).place(x=10, y=410)
         ctk.CTkButton(self.left_frame, text="Sales Analysis", command=self.sales_analysis, width=238,height=35, fg_color="#2155CD", font=("Arial", 20)).place(x=10, y=480)
-        # Treeview in right frame
+
         columns = ("Date", "Item Name", "Category", "Quantity Sold", "Total Price (RM)")
         self.tree = ttk.Treeview(self.right_frame, columns=columns, show="headings", height=20)
         for col in columns:
@@ -93,30 +93,45 @@ class SalesHistoryPage(ctk.CTkFrame):
         cursor = conn.cursor()
 
         query = """
-        SELECT strftime('%Y-%m-%d',sale_date),item_name,category,quantity_sold,total_price
-        FROM Sales WHERE 1=1
+        SELECT 
+            strftime('%Y-%m-%d', sale_date) AS sale_date,
+            item_name,
+            category,
+            SUM(quantity_sold) AS total_quantity,
+            SUM(total_price) AS total_price
+        FROM sales
+        WHERE 1=1
         """
         params = []
+
         from_date = self.from_date_var.get()
         to_date = self.to_date_var.get()
         if from_date and to_date:
             query += " AND DATE(sale_date) BETWEEN ? AND ?"
             params.extend([from_date, to_date])
+
         selected_category = self.category_var.get()
         if selected_category and selected_category != "All":
             query += " AND category = ?"
             params.append(selected_category)
+
+        # ✅ GROUP BY added to combine by date + item + category
+        query += " GROUP BY strftime('%Y-%m-%d', sale_date), item_name, category"
+        query += " ORDER BY sale_date DESC"
+
         cursor.execute(query, params)
         rows = cursor.fetchall()
         conn.close()
+
         for i in self.tree.get_children():
             self.tree.delete(i)
+
         total_sales = 0
         for row in rows:
             formatted_row = list(row)
-            formatted_row[4] = f"{formatted_row[4]:.2f}"
+            formatted_row[4] = f"{formatted_row[4]:.2f}"  # Format total price
             self.tree.insert("", "end", values=formatted_row)
-            total_sales += float(formatted_row[4])
+            total_sales += float(row[4])
 
         self.total_label.configure(text=f"Total Sales : RM {total_sales:.2f}")
 
@@ -168,7 +183,7 @@ class SalesHistoryPage(ctk.CTkFrame):
         cursor = conn.cursor()
         query = """
         SELECT item_name, SUM(quantity_sold)
-        FROM Sales WHERE 1=1
+        FROM sales WHERE 1=1
         """
         params = []
 
