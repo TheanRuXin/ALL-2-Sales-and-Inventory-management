@@ -4,8 +4,12 @@ from six import BytesIO
 import qrcode
 import json
 import customtkinter as ctk
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
 from tkinter import messagebox, ttk, END
 from PIL import Image
+import os
 
 class Setup_Database:
     def __init__(self, db_file= "Trackwise.db"):
@@ -96,7 +100,7 @@ class ManageProductPage(ctk.CTkFrame):
         self.name = ctk.StringVar()
         self.name_entry = ctk.CTkEntry(self, font=("Inter", 18), width=320 / 1536 * self.width,
                                        height=45 / 864 * self.height, bg_color="#FFFFFF",
-                                       fg_color="#D9D9D9", border_color="#FFFFFF", text_color="black",
+                                       fg_color="#ebf9ff", border_color="#0C5481", text_color="black",
                                        textvariable=self.name)
         self.name_entry.place(x=1370 / 1920 * self.width, y=152 / 974 * self.height)
 
@@ -110,7 +114,7 @@ class ManageProductPage(ctk.CTkFrame):
         self.category = ctk.StringVar()
         self.category_combobox = ctk.CTkComboBox(self, width=320 / 1536 * self.width,values=self.categories,
                                            height=45 / 864 * self.height, bg_color="#FFFFFF",
-                                           fg_color="#D9D9D9", border_color="#FFFFFF", text_color="black")
+                                           fg_color="#ebf9ff", border_color="#0C5481", text_color="black",button_color="#52a0bf",button_hover_color="#0C5481")
         if self.categories:
             self.category_combobox.set(self.categories[0])
         self.category_combobox.place(x=1370 / 1920 * self.width, y=270 / 974 * self.height)
@@ -125,7 +129,7 @@ class ManageProductPage(ctk.CTkFrame):
         self.quantity = ctk.StringVar()
         self.quantity_entry = ctk.CTkEntry(self, font=("Inter", 18), width=320 / 1536 * self.width,
                                            height=45 / 864 * self.height, bg_color="#FFFFFF",
-                                           fg_color="#D9D9D9", border_color="#FFFFFF", text_color="black",
+                                           fg_color="#ebf9ff", border_color="#0C5481", text_color="black",
                                            textvariable=self.quantity)
         self.quantity_entry.place(x=1370 / 1920 * self.width, y=380 / 974 * self.height)
 
@@ -139,7 +143,7 @@ class ManageProductPage(ctk.CTkFrame):
         self.price = ctk.StringVar()
         self.price_entry = ctk.CTkEntry(self, font=("Inter", 18), width=320 / 1536 * self.width,
                                         height=45 / 864 * self.height, bg_color="#FFFFFF",
-                                        fg_color="#D9D9D9", border_color="#FFFFFF", text_color="black",
+                                        fg_color="#ebf9ff", border_color="#0C5481", text_color="black",
                                         textvariable=self.price)
         self.price_entry.place(x=1370 / 1920 * self.width, y=488 / 974 * self.height)
 
@@ -154,7 +158,7 @@ class ManageProductPage(ctk.CTkFrame):
         self.status_entry = ctk.CTkComboBox(self, values=["In Stock", "Out of Stock", "Unavailable"],
                                             font=("Arial", 18), width=320 / 1536 * self.width,
                                             height=45 / 864 * self.height, bg_color="#FFFFFF",
-                                            fg_color="#D9D9D9", border_color="#FFFFFF", text_color="black",
+                                            fg_color="#ebf9ff", border_color="#0C5481", text_color="black",button_color="#52a0bf", button_hover_color="#0C5481"
                                             )
         self.status_entry.place(x=1370 / 1920 * self.width, y=600 / 974 * self.height)
 
@@ -168,19 +172,19 @@ class ManageProductPage(ctk.CTkFrame):
         self.date = ctk.StringVar()
         self.date_entry = ctk.CTkEntry(self, font=("Inter", 18), width=320 / 1536 * self.width,
                                        height=45 / 864 * self.height, bg_color="#FFFFFF",
-                                       fg_color="#D9D9D9", border_color="#FFFFFF", text_color="black",
+                                       fg_color="#ebf9ff", border_color="#0C5481", text_color="black",
                                        textvariable=self.date,state="disabled")
         self.date_entry.place(x=1370 / 1920 * self.width, y=710 / 974 * self.height)
 
         # Update Product Button
-        self.update_button = ctk.CTkButton(self, text="Update Product", bg_color="#FFFFFF", fg_color="#2A50CB",
+        self.update_button = ctk.CTkButton(self, text="Update Product", bg_color="#FFFFFF", fg_color="#0C5481",
                                            text_color="#FFFCFC",
                                            border_color="#1572D3", width=159, height=44,
                                            font=("Inter", 20), command=self.update_item_handler)
         self.update_button.place(x=632 / 1920 * self.winfo_screenwidth(), y=730 / 974 * self.winfo_screenheight())
 
         # Delete Product Button
-        self.delete_button = ctk.CTkButton(self, text="Delete Product", bg_color="#FFFFFF", fg_color="#2A50CB",
+        self.delete_button = ctk.CTkButton(self, text="Delete Product", bg_color="#FFFFFF", fg_color="#0C5481",
                                            text_color="#FFFCFC",
                                            border_color="#1572D3", width=159, height=44,
                                            font=("Inter", 20), command=self.delete_item_handler)
@@ -190,7 +194,7 @@ class ManageProductPage(ctk.CTkFrame):
         self.change_image_button = ctk.CTkButton(self, text="Change Image",
                                                  font=("Inter", 16),
                                                  width=150, height=40,
-                                                 bg_color="#FFFFFF", fg_color="#2A50CB",
+                                                 bg_color="#FFFFFF", fg_color="#0C5481",
                                                  text_color="#FFFCFC",
                                                  border_color="#1572D3",
                                                  command=self.change_product_image)
@@ -208,21 +212,29 @@ class ManageProductPage(ctk.CTkFrame):
                                          width=320 / 1536 * self.width,
                                          height=45 / 864 * self.height,
                                          bg_color="#FFFFFF",
-                                         fg_color="#D9D9D9", border_color="#FFFFFF",
+                                         fg_color="#ebf9ff", border_color="#0C5481",
                                          text_color="black",
                                          font=("Inter", 16))
         self.search_entry.place(x=800 / 1920 * self.width, y=280 / 864 * self.height)
         self.search_entry.bind("<KeyRelease>", lambda e: self.search_items(self.search_var.get()))
 
         # OR CODES
-        self.qr_label = ctk.CTkLabel(self, text="QR Code will Appear Here", bg_color="#FFFFFF", fg_color="#2A50CB",
+        self.qr_label = ctk.CTkLabel(self, text="QR Code will Appear Here", bg_color="#FFFFFF", fg_color="#eaf9ff",
                                      width=200, height=182)
         self.qr_label.place(x=458 / 1920 * self.width, y=133 / 974 * self.height)
 
         # Product Image Label
         self.product_image_label = ctk.CTkLabel(self, text="Product Image Will Appear Here", bg_color="#FFFFFF",
-                                                fg_color="#2A50CB", width=200, height=182)
+                                                fg_color="#eaf9ff", width=200, height=182)
         self.product_image_label.place(x=130 / 1920 * self.width, y=133 / 974 * self.height)
+        self.print_qr_button = ctk.CTkButton(self, text="Print QR Code",
+                                             font=("Inter", 16),
+                                             width=159, height=44,
+                                             bg_color="#FFFFFF", fg_color="#0C5481",
+                                             text_color="#FFFCFC",
+                                             border_color="#1572D3",
+                                             command=self.print_qr_code)
+        self.print_qr_button.place(x=300 / 1920 * self.width, y=790 / 974 * self.height)
 
         # Treeview
         self.entries = {
@@ -236,8 +248,9 @@ class ManageProductPage(ctk.CTkFrame):
 
         style = ttk.Style()
         style.theme_use("clam")
-        style.configure("Treeview.Heading", font=("Inter", 18), rowheight=80)
-        style.configure("Treeview", font=("Inter", 16), rowheight=32)
+        style.configure("Treeview.Heading", font=("Inter", 18), rowheight=80, background="#0C5481", foreground="white")
+        style.configure("Treeview", font=("Inter", 16), rowheight=32,background="#eaf9ff",
+                        foreground="#057687",fieldbackground="#eaf9ff")
         frame = ctk.CTkFrame(self)
         frame.place(x=50 / 1920 * self.width, y=360 / 864 * self.height)
         self.product_treeview = ttk.Treeview(frame, columns=("Product ID", "Name", "Category", "Quantity",
@@ -573,3 +586,49 @@ class ManageProductPage(ctk.CTkFrame):
             self.on_treeview_select()  # refresh image shown
         except Exception as e:
             messagebox.showerror("Error", f"Failed to update image.\n{e}")
+
+    def print_qr_code(self):
+        if not hasattr(self, 'qr_img') or self.qr_img is None:
+            messagebox.showerror("Error", "No QR code available to save.")
+            return
+
+        try:
+            from tkinter import filedialog
+
+            # Ask user where to save the file
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".pdf",
+                filetypes=[("PDF files", "*.pdf")],
+                title="Save QR Code as PDF"
+            )
+
+            if not file_path:
+                return  # User cancelled
+
+            # Convert CTkImage to PIL image
+            qr_image = self.qr_img._light_image  # Extract underlying PIL image
+            temp_img_path = "temp_qr_image.png"
+            qr_image.save(temp_img_path)
+
+            # Prepare PDF
+            c = canvas.Canvas(file_path, pagesize=A4)
+            width, height = A4
+
+            # Insert QR image into PDF (centered)
+            c.drawImage(temp_img_path, x=(width - 50 * mm) / 2, y=(height - 50 * mm) / 2, width=50 * mm, height=50 * mm)
+
+            # Optional: Add product ID and name as labels
+            selected = self.product_treeview.selection()
+            if selected:
+                values = self.product_treeview.item(selected, "values")
+                c.setFont("Helvetica", 12)
+                c.drawCentredString(width / 2, (height - 50 * mm) / 2 - 20, f"Product ID: {values[0]}")
+                c.drawCentredString(width / 2, (height - 50 * mm) / 2 - 35, f"Name: {values[1]}")
+
+            c.save()
+            os.remove(temp_img_path)
+
+            messagebox.showinfo("Success", f"QR code saved as PDF:\n{file_path}")
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save QR code as PDF: {e}")
