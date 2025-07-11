@@ -79,13 +79,21 @@ class DebitCardWindow(ctk.CTkToplevel):
             messagebox.showerror("CVV Error", "CVV must be 3 digits.")
             return
 
-        card_info = {
+        self.card_info = {
             "name": name,
             "card_number": card,
             "expiry": expiry,
             "cvv": cvv
         }
 
-        self.on_submit_callback(card_info)
-        messagebox.showinfo("Payment Success", f"RM {self.amount_due:.2f} paid with Debit Card.")
-        self.destroy()
+        self.destroy()  # Immediately close the window
+        self.after(100, self.after_destroy_callback)  # Then show message and call callback
+
+    def after_destroy_callback(self):
+        try:
+            messagebox.showinfo("Payment Success", f"RM {self.amount_due:.2f} paid with Debit Card.")
+            if self.on_submit_callback:
+                self.on_submit_callback(self.card_info)
+        except Exception as e:
+            print("Callback error:", e)
+
