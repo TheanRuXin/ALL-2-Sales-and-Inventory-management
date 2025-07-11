@@ -183,9 +183,14 @@ class SalesReportPage(ctk.CTkFrame):
 
     def print_transaction_summary(self):
         print("\n📋 Transaction Summary:")
+        total_all = 0  # total of all transactions
+
         for row in self.sales_data:
             invoice_id, sale_date, total_items, total_price = row
             print(f"- {invoice_id} | {sale_date} | Items: {total_items} | Total: RM {total_price:.2f}")
+            total_all += total_price
+
+        print(f"\n🧾 Grand Total for Period: RM {total_all:.2f}")
 
     def save_transaction_summary_pdf(self):
         from_date = self.from_date.get().strip()
@@ -228,6 +233,8 @@ class SalesReportPage(ctk.CTkFrame):
             y -= 20
             pdf.setFont("Helvetica", 11)
 
+            total_all = 0
+
             for row in self.sales_data:
                 invoice_id, sale_date, total_items, total_price = row
                 pdf.drawString(40, y, str(invoice_id))
@@ -235,9 +242,21 @@ class SalesReportPage(ctk.CTkFrame):
                 pdf.drawString(310, y, str(total_items))
                 pdf.drawString(410, y, f"{total_price:.2f}")
                 y -= 20
+                total_all += total_price
+
                 if y < 50:
                     pdf.showPage()
                     y = height - 50
+
+            # Draw grand total
+            if y < 70:
+                pdf.showPage()
+                y = height - 50
+
+            pdf.setFont("Helvetica-Bold", 12)
+            y -= 10
+            pdf.drawString(300, y, "Grand Total:")
+            pdf.drawString(410, y, f"RM {total_all:.2f}")
 
             pdf.save()
             print(f"✅ PDF saved successfully as: {file_path}")
