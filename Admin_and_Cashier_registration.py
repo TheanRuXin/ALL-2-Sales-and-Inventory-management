@@ -76,12 +76,12 @@ class Register(ctk.CTkFrame):
         self.register_button = ctk.CTkButton(main_frame, text="Register", width=250, height=40, font=("Arial", 24),hover_color="#1a39a3", command=self.register_user)
         self.register_button.pack(pady=(1, 20), anchor='center')
 
-        self.view_employee_button = ctk.CTkButton(self, text="View Employee", width=250, height=40,
+        self.view_employee_button = ctk.CTkButton(main_frame, text="View Employee", width=250, height=40,
                                                   font=("Arial", 20), corner_radius=10, fg_color="#1a73e8",
                                                   hover_color="#1a39a3", text_color="white",
                                                   command=self.view_employee
                                                   )
-        self.view_employee_button.pack(pady=30)
+        self.view_employee_button.pack(pady=(1,20),anchor="ne")
 
     def Trackwise_db(self):
         conn = sqlite3.connect("Trackwise.db")
