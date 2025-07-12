@@ -274,7 +274,7 @@ class PaymentFrame(ctk.CTkFrame):
         # Data rows
         add_row("Total Net before Tax:", f"RM {self.original_total- self.tax_amount:.2f}")
         add_row("Discount:", f"-RM {self.discount_amount:.2f}", color="red")
-        add_row("Service Tax (6%):", f"+RM {self.tax_amount:.2f}")
+        add_row("Tax (6%):", f"+RM {self.tax_amount:.2f}")
         add_row("Total Cost after Tax:", f"RM {self.total_amount:.2f}", bold=True)
         total_quantity = sum(q for _, _, q, _, _ in self.cart_items)
         add_row("Total Quantity:", str(total_quantity))
