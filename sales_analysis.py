@@ -22,11 +22,11 @@ matplotlib.rcParams['font.size'] = 13
 matplotlib.use('Agg')
 
 class SaleAnalysis(ctk.CTkFrame):
-    def __init__(self, parent, controller):
+    def __init__(self,parent,controller):
         super().__init__(parent)
         self.controller = controller
         self.configure(fg_color="white")
-        self.create_sales_table()  # ✅ Ensure the table exists
+        self.create_sales_table()
         self.setup_ui()
 
     def setup_ui(self):
@@ -34,7 +34,7 @@ class SaleAnalysis(ctk.CTkFrame):
         title_label.place(x=50, y=20)
         filter_frame = ctk.CTkFrame(self, fg_color="white", bg_color="white")
         filter_frame.pack(pady=(80,50))
-        logo_image = CTkImage(light_image=Image.open(r"logo.png"), size=(90, 80))
+        logo_image = CTkImage(light_image=Image.open(r"C:\Users\User\Documents\Ruxin file\ALL 2\logo.png"), size=(90, 80))
         logo_label = ctk.CTkLabel(self, image=logo_image, text="")
         logo_label.place(relx=1.0, x=-60, y=20, anchor="ne")
 
