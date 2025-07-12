@@ -8,6 +8,7 @@ from payment_window import PaymentFrame
 import threading
 import pythoncom
 import platform
+
 if platform.system() == "Windows":
     import wmi  # For Windows USB detection
 elif platform.system() == "Linux":
@@ -38,12 +39,6 @@ class Dashboard:
         self.main_frame.columnconfigure(0, weight=2)
         self.main_frame.columnconfigure(1, weight=1)
         self.load_dashboard_content()
-        self.check_for_usb_device()  # <-- Add this at the end of __init__
-        # QR Entry - Hidden input field for QR scanner input
-        self.qr_entry = ctk.CTkEntry(self.main_frame, width=1, height=1)
-        self.qr_entry.place(x=-100, y=-100)  # Hidden offscreen
-        self.qr_entry.bind("<Return>", self.handle_qr_scan)
-        self.qr_entry.focus_set()  # Autofocus so scanner input goes here
 
     def get_cashier_name(self):
         try:
@@ -355,7 +350,7 @@ class Dashboard:
         total_frame.grid(row=0, column=1, sticky="n", padx=10, pady=(10, 10), ipadx=10, ipady=5)
 
         # Net Label (Subtotal)
-        self.net_label = ctk.CTkLabel(total_frame, text="Net: RM 0.00", font=("Arial", 14), text_color="#0C5481",
+        self.net_label = ctk.CTkLabel(total_frame, text="Total Net before Tax: RM 0.00", font=("Arial", 14), text_color="#0C5481",
                                       anchor="w")
         self.net_label.pack(pady=(5, 0), padx=10, fill="x")
 
@@ -408,7 +403,7 @@ class Dashboard:
 
         self.final_total = round(net_total - self.discount_amount, 2)  # ✅ No extra tax added
 
-        self.net_label.configure(text=f"Net: RM {net_total - self.tax_amount:.2f}")
+        self.net_label.configure(text=f"Total Net before Tax: RM {net_total - self.tax_amount:.2f}")
         self.tax_label.configure(text=f"Tax (included): RM {self.tax_amount:.2f}")
         self.total_label.configure(text=f"Total: RM {self.final_total:.2f}")
 
