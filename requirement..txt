@@ -1,0 +1,15 @@
+Requirement:
+1. pip
+2. customtkinter
+3. CTKCalendar
+4. WMI
+5. bcrypt
+6. qrcode
+7. pillow
+8. sqlite3
+9. smtplib
+10. reportlab
+11. tkcalendar
+12. os
+13. tkcalendar
+14. matplotlib
