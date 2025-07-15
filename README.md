@@ -38,16 +38,21 @@ Steps:
 ## Usage
 ### For Manager:
 1. Login as Manager with username "trackwise" and Password "trackwise123".
-2. Search the available cars and select your desired vehicle.
-3. Book a car by specifying the rental dates.
-4. View your booking and history in the profile section.
+2. Navigate to Register new user and register account for admin and cashier.
+3. View Sales and Inventory report.
 
-### For Agency:
-1. Sign Up and Log In 
-2. Log In to the admin panel.
-2. Add or update car details, including model, price, and availability.
-3. Manage car details, customer bookings, ratings and reviews, promotions and history.
+### For Admin:
+1. Login
+2. Login to the admin panel.
+3. Register New Product. Add Image
+4. Manage the product details and image if any.
 
+### For Cashier:
+1. Login 
+2. Log In to the cashier panel.
+2. Process the sale, choose product and add quantity.
+3. Make Payement.
+   
 ## Technologies Used
 - Backend: Python
 - Frontend: Tkinter
