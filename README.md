@@ -10,7 +10,7 @@ A user-friendly sales and inventory management system for recording and controll
 6. License
 
 ## Introduction
-The Car Rental Booking System simplifies the process of booking vehicles for rent. It is designed for car rental businesses to provide seamless booking experiences to their customers and efficient management for administrators.
+POS and Managment System simplifies the process of Managment for POS. It is designed for POS and Inventory to provide seamless purchase experiences to their customers and efficient management for administrators.
 
 ## Features
 - User authentication for customers and administrators.
@@ -22,19 +22,14 @@ The Car Rental Booking System simplifies the process of booking vehicles for ren
 ## Installation
 Steps:
 
-1.Clone the Repository: 'https://github.com/TheanRuXin/Car-Booking/tree/master'
-
-2.Navigate to the project directory: 'Car-Booking'
+1.Clone the Repository: 'https://github.com/TheanRuXin/ALL-2-Sales-and-Inventory-management/'
 
 3.Install Required Python Libraries: Install all dependencies listed in the `requirements.txt` file
 
-4.Set Up the SQLite Database: The system uses SQLite as the database. Ensure the database file (e.g., `Car_Rental.db`) exists in the project directory.
+4.Set Up the SQLite Database: The system uses SQLite as the database. Ensure the database file (e.g., `Trackwise.db`) exists in the project directory.
 
 5.Run the Application: 
-  1. Start the program for customer: 'first_page.py'
-  2. Start the program for agency: 'agency_first_page.py'
-
-6.Use the GUI window to interact with the car rental booking system.
+  1. Start the program : 'main.py'
 
 ### Notes
 - Email Features: Ensure you configure the email settings in your script (`smtplib` section) for features like email notifications.
