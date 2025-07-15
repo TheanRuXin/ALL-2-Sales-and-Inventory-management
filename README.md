@@ -13,11 +13,14 @@ A user-friendly sales and inventory management system for recording and controll
 POS and Managment System simplifies the process of Managment for POS. It is designed for POS and Inventory to provide seamless purchase experiences to their customers and efficient management for administrators.
 
 ## Features
-- User authentication for customers and administrators.
-- Search and filter cars by model, price and color.
-- Real-time booking and availability updates.
-- Easy management of customer profiles and rental history.
-- Agency dashboard to add, update, or remove vehicles.
+- Manager Register New Account/ active / deactive / change role of an users.
+- Manager View Sales Report and View Inventory Reprt.
+- Admin Register New Product.
+- Admin Manage Product details.
+- Admin Print Product QR Code.
+- Cashier Process Sales and Make Payment in 3 different payment method.
+- Cashier View Sales History
+- Cashier View Available Product
 
 ## Installation
 Steps:
