@@ -36,8 +36,8 @@ Steps:
 - PDF Reports: The system generates reports using `reportlab`. Reports will be saved in the project directory.
 
 ## Usage
-### For Customers:
-1. Sign Up and Log In.
+### For Manager:
+1. Login as Manager with username "trackwise" and Password "trackwise123".
 2. Search the available cars and select your desired vehicle.
 3. Book a car by specifying the rental dates.
 4. View your booking and history in the profile section.
